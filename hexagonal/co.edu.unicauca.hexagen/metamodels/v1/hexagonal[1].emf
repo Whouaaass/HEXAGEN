@@ -1,0 +1,76 @@
+@namespace(uri="http://a.b.c/x/y/Z", prefix="p")
+package top;
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/root.png")
+class Application {
+	attr String name;
+	attr String basePackage;
+	attr String javaVersion;
+	val Entity[*] entities;
+	val ValueObject[*] valueObjects;
+	val Aggregate[*] aggregates;
+	val Repository[*] repositories;
+	val Service[*] services;
+	val Controller[*] controllers;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/attribute.png")
+class Attribute {
+	attr String name;
+	attr String type;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/relationship.png")
+class Relationship {
+	attr String name;
+	attr Boolean toMany;
+	ref Entity[1] target;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/entity.png")
+class Entity {
+	attr String name;
+	val Attribute[*] attributes;
+	val ValueObject[*] vObj;
+	val Relationship[*] relationships;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/value-object.png")
+class ValueObject {
+	attr String name;
+	val Attribute[*] attributes;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/aggregate.png")
+class Aggregate {
+	attr String name;
+	ref ValueObject[*] vObj;
+	ref Entity[*] entity;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/repository.png")
+class Repository {
+	attr String name;
+	ref Aggregate agg;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/operation.png")
+class Operation {
+	attr String name;
+	attr String returnType;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/service.png")
+class Service {
+	attr String name;
+	ref Repository[*] rps;
+	val Operation[*] operations;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagen/icons/controller.png")
+class Controller {
+	attr String name;
+	attr String basePath;
+	ref Service service;
+}
+
