@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="ASCII"?>
+<p:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://a.b.c/x/y/Z" xsi:schemaLocation="http://a.b.c/x/y/Z hexagen.ecore" name="LibrarySystem">
+  <core>
+    <aggregates name="Book">
+      <attributes xsi:type="p:Attribute" name="isbn" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="title" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="author" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="publicationYear" type="Integer" required="true"/>
+      <attributes xsi:type="p:Attribute" name="status" type="String" required="true"/>
+    </aggregates>
+    <aggregates name="User">
+      <attributes xsi:type="p:Attribute" name="userId" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="name" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="email" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="membershipDate" type="Date" required="true"/>
+    </aggregates>
+    <aggregates name="Loan">
+      <attributes xsi:type="p:Attribute" name="loanId" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="loanDate" type="Date" required="true"/>
+      <attributes xsi:type="p:Attribute" name="dueDate" type="Date" required="true"/>
+      <attributes xsi:type="p:Attribute" name="returnDate" type="Date" required="false"/>
+    </aggregates>
+    <aggregates name="Reservation">
+      <attributes xsi:type="p:Attribute" name="reservationId" type="String" required="true"/>
+      <attributes xsi:type="p:Attribute" name="reservationDate" type="Date" required="true"/>
+      <attributes xsi:type="p:Attribute" name="status" type="String" required="true"/>
+    </aggregates>
+  </core>
+  <ports xsi:type="p:OutboundPort" name="LoanBookPort">
+    <operations name="findBook" returnType="Book" operationType="QUERY"/>
+  </ports>
+  <ports xsi:type="p:OutboundPort" name="LoanUserPort">
+    <operations name="findUser" returnType="User" operationType="QUERY"/>
+  </ports>
+  <ports xsi:type="p:OutboundPort" name="ReservationBookPort">
+    <operations name="findBook" returnType="Book" operationType="QUERY"/>
+  </ports>
+  <ports xsi:type="p:OutboundPort" name="ReservationUserPort">
+    <operations name="findUser" returnType="User" operationType="QUERY"/>
+  </ports>
+  <adapters xsi:type="p:OutboundAdapter" name="LoanBookAdapter" targetPort="//@ports.0" technology="JPA"/>
+  <adapters xsi:type="p:OutboundAdapter" name="LoanUserAdapter" targetPort="//@ports.1" technology="JPA"/>
+  <adapters xsi:type="p:OutboundAdapter" name="ReservationBookAdapter" targetPort="//@ports.2" technology="JPA"/>
+  <adapters xsi:type="p:OutboundAdapter" name="ReservationUserAdapter" targetPort="//@ports.3" technology="JPA"/>
+  <services name="LoanService">
+    <useCases name="borrowBook" returnType="Loan">
+      <input name="bookId" type="String" required="true"/>
+      <input name="userId" type="String" required="true"/>
+    </useCases>
+    <useCases name="returnBook" returnType="Boolean">
+      <input name="loanId" type="String" required="true"/>
+    </useCases>
+    <useCases name="renewLoan" returnType="Boolean">
+      <input name="loanId" type="String" required="true"/>
+      <input name="days" type="Integer" required="true"/>
+    </useCases>
+    <useCases name="checkOverdue" returnType="List&lt;Loan>">
+      <input name="userId" type="String" required="true"/>
+    </useCases>
+  </services>
+  <services name="CatalogService">
+    <useCases name="searchBooks" returnType="List&lt;Book>">
+      <input name="query" type="String" required="true"/>
+    </useCases>
+    <useCases name="addBook" returnType="Book">
+      <input name="isbn" type="String" required="true"/>
+      <input name="title" type="String" required="true"/>
+      <input name="author" type="String" required="true"/>
+    </useCases>
+    <useCases name="updateBook" returnType="Book">
+      <input name="isbn" type="String" required="true"/>
+      <input name="updates" type="Map" required="true"/>
+    </useCases>
+    <useCases name="removeBook" returnType="Boolean">
+      <input name="isbn" type="String" required="true"/>
+    </useCases>
+  </services>
+  <services name="UserService">
+    <useCases name="registerUser" returnType="User">
+      <input name="name" type="String" required="true"/>
+      <input name="email" type="String" required="true"/>
+    </useCases>
+    <useCases name="updateUser" returnType="User">
+      <input name="userId" type="String" required="true"/>
+      <input name="updates" type="Map" required="true"/>
+    </useCases>
+    <useCases name="suspendUser" returnType="Boolean">
+      <input name="userId" type="String" required="true"/>
+      <input name="reason" type="String" required="false"/>
+    </useCases>
+  </services>
+</p:Hexagon>

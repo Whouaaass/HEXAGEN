@@ -1,0 +1,115 @@
+@namespace(
+    uri="http://a.b.c/x/y/Z",
+    prefix="p"
+)
+package hexagonal_ddd;
+
+class Hexagon {
+    attr String name;
+    val DomainCore[1] core;
+    val Port[*] ports;
+    val Adapter[*] adapters;
+    val ApplicationService[*] services;
+}
+
+class DomainCore {
+    val AggregateRoot[*] aggregates;
+}
+
+abstract class DomainObject {
+    attr String name;
+    val Attribute[*] values;
+}
+
+class Attribute {
+    attr String name;
+    attr String type;
+    attr Boolean required;
+}
+
+class AggregateRoot extends DomainObject {
+    val Entity[*] internalEntities;
+    val ValueObject[*] attributes;
+    val Association[*] associations;
+}
+
+class Entity extends DomainObject {
+    val ValueObject[*] attributes;
+    val Association[*] associations;
+}
+
+class ValueObject extends DomainObject {
+}
+
+class Association {
+    attr String name;
+    ref DomainObject source;
+    ref DomainObject target;
+    attr String multiplicity;
+    attr Boolean isNavigable;
+}
+
+abstract class Port {
+    attr String name;
+}
+
+class InboundPort extends Port {
+}
+
+class OutboundPort extends Port {
+    val InfrastructureOperation[*] operations;
+}
+
+class InfrastructureOperation extends DomainObject {
+    attr String returnType;
+    val Parameter[*] parameters;
+    attr String operationType;
+}
+
+abstract class Adapter {
+    attr String name;
+    ref Port[1] targetPort;
+    attr String technology;
+}
+
+class InboundAdapter extends Adapter {
+}
+
+class OutboundAdapter extends Adapter {
+}
+
+class ExternalSystem {
+    attr String name;
+    ref Adapter[*] connectsThrough;
+}
+
+class ApplicationService {
+    attr String name;
+    ref InboundPort[*] exposedThrough;
+    ref AggregateRoot[*] coordinates;
+    ref OutboundPort[*] calls;
+    val UseCase[*] useCases;
+}
+
+class UseCase {
+    attr String name;
+    attr String returnType;
+    val Attribute[*] input;
+    val Attribute[*] output;
+}
+
+class DomainService extends DomainObject {
+    val DomainOperation[*] operations;
+    ref AggregateRoot[*] operatesOn;
+}
+
+class DomainOperation extends DomainObject {
+    attr String returnType;
+    val Parameter[*] parameters;
+    attr Boolean isCommand;
+}
+
+class Parameter extends DomainObject {
+    attr String type;
+    attr Boolean required;
+}

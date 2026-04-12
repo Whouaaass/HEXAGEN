@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<conceptual:ConceptualModel 
+    xmi:version="2.0" 
+    xmlns:xmi="http://www.omg.org/XMI" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:conceptual="http://www.hexagen.org/conceptual"
+    name="LibrarySystem">
+
+  <!-- ================================ -->
+  <!-- Entity: Book                     -->
+  <!-- ================================ -->
+  <entities name="Book">
+    <attributes name="isbn" type="String" required="true"/>
+    <attributes name="title" type="String" required="true"/>
+    <attributes name="author" type="String" required="true"/>
+    <attributes name="publicationYear" type="Integer" required="true"/>
+    <attributes name="status" type="String" required="true"/>
+  </entities>
+
+  <!-- ================================ -->
+  <!-- Entity: User                     -->
+  <!-- ================================ -->
+  <entities name="User">
+    <attributes name="userId" type="String" required="true"/>
+    <attributes name="name" type="String" required="true"/>
+    <attributes name="email" type="String" required="true"/>
+    <attributes name="membershipDate" type="Date" required="true"/>
+  </entities>
+
+  <!-- ================================ -->
+  <!-- Entity: Loan                     -->
+  <!-- ================================ -->
+  <entities name="Loan">
+    <attributes name="loanId" type="String" required="true"/>
+    <attributes name="loanDate" type="Date" required="true"/>
+    <attributes name="dueDate" type="Date" required="true"/>
+    <attributes name="returnDate" type="Date" required="false"/>
+  </entities>
+
+  <!-- ================================ -->
+  <!-- Entity: Reservation              -->
+  <!-- ================================ -->
+  <entities name="Reservation">
+    <attributes name="reservationId" type="String" required="true"/>
+    <attributes name="reservationDate" type="Date" required="true"/>
+    <attributes name="status" type="String" required="true"/>
+  </entities>
+
+  <!-- ================================ -->
+  <!-- Relationships                    -->
+  <!-- ================================ -->
+
+  <!-- Loan → Book (ManyToOne) -->
+  <relationships name="LoanBook" 
+                 type="ManyToOne" 
+                 source="//@entities.2" 
+                 target="//@entities.0"/>
+
+  <!-- Loan → User (ManyToOne) -->
+  <relationships name="LoanUser" 
+                 type="ManyToOne" 
+                 source="//@entities.2" 
+                 target="//@entities.1"/>
+
+  <!-- Reservation → Book (ManyToOne) -->
+  <relationships name="ReservationBook" 
+                 type="ManyToOne" 
+                 source="//@entities.3" 
+                 target="//@entities.0"/>
+
+  <!-- Reservation → User (ManyToOne) -->
+  <relationships name="ReservationUser" 
+                 type="ManyToOne" 
+                 source="//@entities.3" 
+                 target="//@entities.1"/>
+
+  <!-- ================================ -->
+  <!-- Service: LoanService             -->
+  <!-- ================================ -->
+  <services name="LoanService">
+    <entities href="//@entities.2"/>  <!-- Loan -->
+    <entities href="//@entities.0"/>  <!-- Book -->
+    <entities href="//@entities.1"/>  <!-- User -->
+    
+    <operations name="borrowBook" returnType="Loan">
+      <parameters name="bookId" type="String" required="true"/>
+      <parameters name="userId" type="String" required="true"/>
+    </operations>
+    
+    <operations name="returnBook" returnType="Boolean">
+      <parameters name="loanId" type="String" required="true"/>
+    </operations>
+    
+    <operations name="renewLoan" returnType="Boolean">
+      <parameters name="loanId" type="String" required="true"/>
+      <parameters name="days" type="Integer" required="true"/>
+    </operations>
+    
+    <operations name="checkOverdue" returnType="List&lt;Loan&gt;">
+      <parameters name="userId" type="String" required="true"/>
+    </operations>
+  </services>
+
+  <!-- ================================ -->
+  <!-- Service: CatalogService          -->
+  <!-- ================================ -->
+  <services name="CatalogService">
+    <entities href="//@entities.0"/>  <!-- Book -->
+    
+    <operations name="searchBooks" returnType="List&lt;Book&gt;">
+      <parameters name="query" type="String" required="true"/>
+    </operations>
+    
+    <operations name="addBook" returnType="Book">
+      <parameters name="isbn" type="String" required="true"/>
+      <parameters name="title" type="String" required="true"/>
+      <parameters name="author" type="String" required="true"/>
+    </operations>
+    
+    <operations name="updateBook" returnType="Book">
+      <parameters name="isbn" type="String" required="true"/>
+      <parameters name="updates" type="Map" required="true"/>
+    </operations>
+    
+    <operations name="removeBook" returnType="Boolean">
+      <parameters name="isbn" type="String" required="true"/>
+    </operations>
+  </services>
+
+  <!-- ================================ -->
+  <!-- Service: UserService             -->
+  <!-- ================================ -->
+  <services name="UserService">
+    <entities href="//@entities.1"/>  <!-- User -->
+    
+    <operations name="registerUser" returnType="User">
+      <parameters name="name" type="String" required="true"/>
+      <parameters name="email" type="String" required="true"/>
+    </operations>
+    
+    <operations name="updateUser" returnType="User">
+      <parameters name="userId" type="String" required="true"/>
+      <parameters name="updates" type="Map" required="true"/>
+    </operations>
+    
+    <operations name="suspendUser" returnType="Boolean">
+      <parameters name="userId" type="String" required="true"/>
+      <parameters name="reason" type="String" required="false"/>
+    </operations>
+  </services>
+
+</conceptual:ConceptualModel>
