@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal ../metamodels/v2/hexagonal.ecore">
+    <core>
+    <aggregates name="Libro">
+      <values name="totalPrice" type="Double"/>
+      <internalEntities name="OrderLine">
+        <values name="quantity" type="Integer"/>
+        <attributes name="ProductDetails">
+          <values name="sku" type="String"/>
+        </attributes>
+      </internalEntities>
+      <attributes name="ShippingAddress">
+        <values name="city" type="String"/>
+        <values name="street" type="String"/>
+      </attributes>
+    </aggregates>
+  </core>
+  <ports xsi:type="p:InboundPort" name="AgregarLibro"/>
+  <ports xsi:type="p:OutboundPort" name="PersistenciaLibro"/>
+  <adapters xsi:type="p:InboundAdapter" name="AgregarLibroRestController" targetPort="//@ports.0"/>
+  <adapters xsi:type="p:OutboundAdapter" name="PersistenciaLibroSQL" targetPort="//@ports.1"/>
+  <services name="LibroApplicationService" exposedThrough="//@ports.0" coordinates="//@core/@aggregates.0" calls="//@ports.1">
+    <useCases name="AgregarLibro"/>
+  </services>
+</p:Hexagon>
