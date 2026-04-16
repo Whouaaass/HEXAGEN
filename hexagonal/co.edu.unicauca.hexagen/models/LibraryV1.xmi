@@ -1,10 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="ASCII"?>
 <xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://a.b.c/x/y/Z" xsi:schemaLocation="http://a.b.c/x/y/Z ../metamodels/v1/hexagonal%5B1%5D.ecore">
-  <p:Application/>
-  <p:Application name="Libreria" basePackage="co.edu.unicauca.libreria" javaVersion="21">
-    <aggregates name="Libro" entity="/2"/>
+  <p:Application basePackage="co.edu.unicauca." javaVersion="21">
+    <aggregates name="Libro" vObj="/2" entity="/1"/>
   </p:Application>
   <p:Entity name="OrderLine">
     <attributes name="quantity" type="Integer"/>
   </p:Entity>
+  <p:ValueObject name="ShippingAddress">
+    <attributes name="city" type="String"/>
+    <attributes name="street" type="String"/>
+  </p:ValueObject>
 </xmi:XMI>

@@ -10,25 +10,39 @@ rule Hexagon2Application
     a.aggregates = h.core.aggregates.equivalent();
 }
 
+@lazy
 rule AggregateRoot2Aggregate
     transform ar : HEXAGEN!AggregateRoot
     to ta : TOP!Aggregate {
     
     ta.name = ar.name;
     // Mapeo de entidades internas
-    ta.entity = ar.internalEntities.equivalent();
+    ta.entity ::= ar.internalEntities;
+    ta.vObj ::= ar.attributes;
 }
 
+@lazy
 rule Entity2Entity
     transform e : HEXAGEN!Entity
     to te : TOP!Entity {
     
     te.name = e.name;
     // Mapeo de atributos
-    for (attr in e.values) {
-        var tAttr = new TOP!Attribute;
-        tAttr.name = attr.name;
-        tAttr.type = attr.type;
-        te.attributes.add(tAttr);
-    }
+    te.attributes ::= e.values;    
+}
+
+@lazy
+rule Attributes2Attributes
+	transform at : HEXAGEN!Attribute
+	to attr: TOP!Attribute {
+	attr.name = at.name;
+	attr.type = at.type;
+}
+
+@lazy
+rule ValueObject2ValueObject
+	transform source: HEXAGEN!ValueObject
+	to target: TOP!ValueObject {
+	target.name = source.name;
+	target.attributes ::= source.values;
 }
