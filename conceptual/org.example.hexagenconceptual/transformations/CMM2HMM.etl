@@ -1,0 +1,124 @@
+rule ConceptualModel2Hexagon
+transform cm : Source!ConceptualModel
+to hex : Target!Hexagon {
+    hex.name = cm.name;
+    
+    var core = new Target!DomainCore;
+    hex.core = core;
+    
+    for (entity in cm.entities) {
+        var agg = new Target!AggregateRoot;
+        agg.name = entity.name;
+        
+        for (attr in entity.attributes) {
+            var ha = new Target!Attribute;
+            ha.name = attr.name;
+            ha.type = attr.type;
+            if (attr.required = null) {
+                ha.required = true;
+            } else {
+                ha.required = attr.required;
+            }
+            agg.attributes.add(ha);
+        }
+        
+        for (rel in entity.relationships) {
+            var assoc = new Target!Association;
+            assoc.name = rel.name;
+            assoc.source = agg;
+            assoc.target = null;
+            assoc.multiplicity = getMultiplicity(rel.type);
+            assoc.isNavigable = true;
+            agg.associations.add(assoc);
+        }
+        
+        core.aggregates.add(agg);
+    }
+    
+    for (vo in cm.valueObjects) {
+        var hvo = new Target!ValueObject;
+        hvo.name = vo.name;
+        
+        for (attr in vo.attributes) {
+            var ha = new Target!Attribute;
+            ha.name = attr.name;
+            ha.type = attr.type;
+            if (attr.required = null) {
+                ha.required = true;
+            } else {
+                ha.required = attr.required;
+            }
+            hvo.attributes.add(ha);
+        }
+        
+        if (not core.aggregates.isEmpty()) {
+            core.aggregates.first().internalEntities.add(hvo);
+        }
+    }
+    
+    for (rel in cm.relationships) {
+        var port = new Target!OutboundPort;
+        port.name = rel.source.name + rel.target.name + 'Port';
+        
+        var infraOp = new Target!InfrastructureOperation;
+        infraOp.name = 'find' + rel.target.name;
+        infraOp.returnType = rel.target.name;
+        infraOp.operationType = 'QUERY';
+        port.operations.add(infraOp);
+        
+        hex.ports.add(port);
+        
+        var adapter = new Target!OutboundAdapter;
+        adapter.name = rel.source.name + rel.target.name + 'Adapter';
+        adapter.targetPort = port;
+        adapter.technology = 'JPA';
+        hex.adapters.add(adapter);
+    }
+    
+    for (svc in cm.services) {
+        var appSvc = new Target!ApplicationService;
+        appSvc.name = svc.name;
+        
+        for (op in svc.operations) {
+            var useCase = new Target!UseCase;
+            useCase.name = op.name;
+            useCase.returnType = op.returnType;
+            
+            for (param in op.parameters) {
+                var inputAttr = new Target!Attribute;
+                inputAttr.name = param.name;
+                inputAttr.type = param.type;
+                if (param.required = null) {
+                    inputAttr.required = true;
+                } else {
+                    inputAttr.required = param.required;
+                }
+                useCase.input.add(inputAttr);
+            }
+            
+            appSvc.useCases.add(useCase);
+        }
+        
+        hex.services.add(appSvc);
+    }
+}
+
+operation getMultiplicity(relType : String) : String {
+    if (relType = 'OneToOne') {
+        return '1';
+    } else {
+        if (relType = 'OneToMany') {
+            return '0..*';
+        } else {
+            if (relType = 'ManyToOne') {
+                return '0..1';
+            } else {
+                if (relType = 'ManyToMany') {
+                    return '0..*';
+                } else {
+                    return '0..1';
+                }
+            }
+        }
+    }
+}
