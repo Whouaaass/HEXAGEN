@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:hexagonal_ddd="http://co.edu.unicauca.hexagen.hexagonal">
+
+  <!-- ══════════════════════════════════════
+       EXTERNAL SYSTEMS (elementos raíz, fuera del Hexagon)
+       ══════════════════════════════════════ -->
+  <hexagonal_ddd:ExternalSystem xmi:id="ext_postgres" name="PostgreSQL"/>
+  <hexagonal_ddd:ExternalSystem xmi:id="ext_smtp"     name="ServidorSMTP"/>
+
+  <!-- ══════════════════════════════════════
+       HEXAGON
+       ══════════════════════════════════════ -->
+  <hexagonal_ddd:Hexagon
+      xmi:id="hexagon_1"
+      name="SistemaDeBiblioteca">
+
+    <!-- ══════════════════════════════════════
+         INFRASTRUCTURE LAYER
+         ══════════════════════════════════════ -->
+    <infrastructure xmi:id="infra_1" name="InfraestructuraBiblioteca">
+
+      <ports xsi:type="hexagonal_ddd:InboundPort"
+             xmi:id="port_inbound_1"
+             name="IPrestamoService"/>
+
+      <ports xsi:type="hexagonal_ddd:OutboundPort"
+             xmi:id="port_outbound_1"
+             name="IPrestamoRepository"/>
+
+      <ports xsi:type="hexagonal_ddd:OutboundPort"
+             xmi:id="port_outbound_2"
+             name="INotificacionSocioGateway"/>
+
+      <adapters xsi:type="hexagonal_ddd:InboundAdapter"
+                xmi:id="adapter_inbound_1"
+                name="PrestamoRestController"/>
+
+      <adapters xsi:type="hexagonal_ddd:OutboundAdapter"
+                xmi:id="adapter_outbound_1"
+                name="JpaPrestamoRepository"/>
+
+      <adapters xsi:type="hexagonal_ddd:OutboundAdapter"
+                xmi:id="adapter_outbound_2"
+                name="EmailNotificacionAdapter"/>
+
+    </infrastructure>
+
+    <!-- ══════════════════════════════════════
+         APPLICATION LAYER
+         ══════════════════════════════════════ -->
+    <application xmi:id="app_1" name="AplicacionBiblioteca">
+
+      <services xmi:id="svc_1" name="PrestamoApplicationService">
+
+        <useCases xmi:id="uc_1" name="RegistrarPrestamo">
+          <input  xmi:id="attr_uc1_in1"  name="socioId"      type="String"/>
+          <input  xmi:id="attr_uc1_in2"  name="libroId"      type="String"/>
+          <input  xmi:id="attr_uc1_in3"  name="fechaLimite"  type="Date"/>
+          <output xmi:id="attr_uc1_out1" name="prestamoId"   type="String"/>
+          <output xmi:id="attr_uc1_out2" name="estado"       type="String"/>
+        </useCases>
+
+        <useCases xmi:id="uc_2" name="DevolverLibro">
+          <input  xmi:id="attr_uc2_in1"  name="prestamoId"    type="String"/>
+          <input  xmi:id="attr_uc2_in2"  name="fechaReal"     type="Date"/>
+          <output xmi:id="attr_uc2_out1" name="multaAplicada" type="Decimal"/>
+          <output xmi:id="attr_uc2_out2" name="exitoso"       type="Boolean"/>
+        </useCases>
+
+      </services>
+
+    </application>
+
+    <!-- ══════════════════════════════════════
+         DOMAIN CORE
+         ══════════════════════════════════════ -->
+    <domain xmi:id="domain_1" name="DominioBiblioteca">
+
+      <!-- AggregateRoot: Prestamo -->
+      <aggregates xmi:id="aggr_prestamo" name="Prestamo">
+
+        <!--
+          Entity: Ejemplar — sin ValueObjects propios,
+          sus datos simples se modelan como atributos primitivos
+          para evitar que un VO quede fuera del AggregateRoot directo.
+        -->
+        <internalEntities xmi:id="entity_ejemplar" name="Ejemplar"/>
+
+        <!--
+          ValueObjects directamente bajo el AggregateRoot,
+          cumpliendo la regla EVL de contención.
+        -->
+        <attributes xmi:id="vo_ubicacion" name="Ubicacion">
+          <values xmi:id="attr_ubic_estante"  name="estante"  type="String"/>
+          <values xmi:id="attr_ubic_seccion"  name="seccion"  type="String"/>
+        </attributes>
+
+        <attributes xmi:id="vo_periodo" name="PeriodoPrestamo">
+          <values xmi:id="attr_periodo_inicio"     name="fechaInicio"     type="Date"/>
+          <values xmi:id="attr_periodo_limite"     name="fechaLimite"     type="Date"/>
+          <values xmi:id="attr_periodo_devolucion" name="fechaDevolucion" type="Date"/>
+        </attributes>
+
+      </aggregates>
+
+      <!-- AggregateRoot: Socio -->
+      <aggregates xmi:id="aggr_socio" name="Socio">
+
+        <attributes xmi:id="vo_contacto" name="ContactoSocio">
+          <values xmi:id="attr_contacto_email"    name="email"    type="String"/>
+          <values xmi:id="attr_contacto_telefono" name="telefono" type="String"/>
+        </attributes>
+
+      </aggregates>
+
+      <!-- DomainService -->
+      <domainServices xmi:id="ds_1" name="PoliticaDeMultaService">
+        <operations xmi:id="op_ds1_1" name="diasRetraso"    type="Integer"/>
+        <operations xmi:id="op_ds1_2" name="categoria"      type="String"/>
+        <operations xmi:id="op_ds1_3" name="multaCalculada" type="Decimal"/>
+      </domainServices>
+
+      <!-- DomainEvents -->
+      <events xmi:id="evt_1"
+              name="PrestamoRegistrado"
+              occurredOn="2025-04-19T09:00:00Z">
+        <payload xmi:id="pl_evt1_1" name="prestamoId"  type="String"/>
+        <payload xmi:id="pl_evt1_2" name="socioId"     type="String"/>
+        <payload xmi:id="pl_evt1_3" name="libroId"     type="String"/>
+        <payload xmi:id="pl_evt1_4" name="fechaLimite" type="Date"/>
+      </events>
+
+      <events xmi:id="evt_2"
+              name="LibroDevuelto"
+              occurredOn="2025-04-19T15:30:00Z">
+        <payload xmi:id="pl_evt2_1" name="prestamoId"      type="String"/>
+        <payload xmi:id="pl_evt2_2" name="fechaDevolucion" type="Date"/>
+        <payload xmi:id="pl_evt2_3" name="multaAplicada"   type="Decimal"/>
+      </events>
+
+    </domain>
+
+    <!-- ══════════════════════════════════════
+         HEXAGON LINKS
+         ══════════════════════════════════════ -->
+
+    <links xsi:type="hexagonal_ddd:AdapterPortLink"
+           xmi:id="link_1"
+           name="REST-to-IPrestamoService"
+           description="Vincula el controlador REST con el puerto de entrada de préstamos"
+           source="adapter_inbound_1"
+           target="port_inbound_1"/>
+
+    <links xsi:type="hexagonal_ddd:AdapterPortLink"
+           xmi:id="link_2"
+           name="JPA-to-IPrestamoRepository"
+           description="Vincula el repositorio JPA con el puerto de salida de persistencia"
+           source="adapter_outbound_1"
+           target="port_outbound_1"/>
+
+    <links xsi:type="hexagonal_ddd:AdapterPortLink"
+           xmi:id="link_3"
+           name="Email-to-INotificacionSocioGateway"
+           description="Vincula el adaptador de email con el puerto de notificaciones al socio"
+           source="adapter_outbound_2"
+           target="port_outbound_2"/>
+
+    <links xsi:type="hexagonal_ddd:ExternalSystemLink"
+           xmi:id="link_4"
+           name="PostgreSQL-to-JpaAdapter"
+           description="PostgreSQL se conecta al sistema mediante el adaptador JPA"
+           source="ext_postgres"
+           target="adapter_outbound_1"/>
+
+    <links xsi:type="hexagonal_ddd:ExternalSystemLink"
+           xmi:id="link_5"
+           name="ServidorSMTP-to-EmailAdapter"
+           description="El servidor SMTP se conecta mediante el adaptador de notificaciones"
+           source="ext_smtp"
+           target="adapter_outbound_2"/>
+
+    <links xsi:type="hexagonal_ddd:ServicePortLink"
+           xmi:id="link_6"
+           name="PrestamoSvc-expone-IPrestamoService"
+           description="El servicio de aplicación se expone a través del puerto de entrada"
+           source="svc_1"
+           target="port_inbound_1"/>
+
+    <links xsi:type="hexagonal_ddd:ServicePortLink"
+           xmi:id="link_7"
+           name="PrestamoSvc-llama-IPrestamoRepository"
+           description="El servicio llama al repositorio mediante el puerto de salida"
+           source="svc_1"
+           target="port_outbound_1"/>
+
+    <links xsi:type="hexagonal_ddd:ServicePortLink"
+           xmi:id="link_8"
+           name="PrestamoSvc-llama-INotificacionSocioGateway"
+           description="El servicio envía notificaciones al socio mediante el puerto de salida"
+           source="svc_1"
+           target="port_outbound_2"/>
+
+    <links xsi:type="hexagonal_ddd:ServiceAggregateLink"
+           xmi:id="link_9"
+           name="PrestamoSvc-coordina-Prestamo"
+           description="El servicio orquesta el agregado Prestamo para ejecutar casos de uso"
+           source="svc_1"
+           target="aggr_prestamo"/>
+
+    <links xsi:type="hexagonal_ddd:ServiceDomainServiceLink"
+           xmi:id="link_10"
+           name="PrestamoSvc-invoca-PoliticaDeMulta"
+           description="El servicio delega el cálculo de multas al servicio de dominio"
+           source="svc_1"
+           target="ds_1"/>
+
+  </hexagonal_ddd:Hexagon>
+
+</xmi:XMI>

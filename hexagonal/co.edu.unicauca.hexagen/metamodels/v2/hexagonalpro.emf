@@ -1,0 +1,149 @@
+@namespace(
+	uri="http://co.edu.unicauca.hexagen.hexagonal",
+	prefix="p")
+package hexagonal_ddd;
+
+// El Hexágono declara las tres capas como contenedores de primer nivel
+class Hexagon {
+    attr String name;
+    val InfrastructureLayer[1] infrastructure;
+    val ApplicationLayer[1] application;
+    val DomainCore[1] domain;
+    val HexagonLink[*] links; 
+}
+
+// ══════════════════════════════════════════
+// CAPA DE INFRAESTRUCTURA
+// Contiene todo lo que toca el mundo externo:
+// puertos, adaptadores y sus vínculos.
+// ══════════════════════════════════════════
+class InfrastructureLayer {
+    attr String name;
+    val Port[*] ports;
+    val Adapter[*] adapters;
+}
+
+abstract class Port {
+    attr String name;
+}
+class InboundPort  extends Port {}
+class OutboundPort extends Port {}
+
+abstract class Adapter {
+    attr String name;
+}
+class InboundAdapter  extends Adapter {}
+class OutboundAdapter extends Adapter {}
+
+// ExternalSystem vive fuera del Hexágono;
+// se conecta a la capa de infraestructura mediante ExternalSystemLink
+class ExternalSystem {
+    attr String name;
+}
+
+// ══════════════════════════════════════════
+// CAPA DE APLICACIÓN
+// Orquesta el dominio sin contener lógica de negocio.
+// Contiene servicios, casos de uso y los vínculos
+// hacia puertos y agregados.
+// ══════════════════════════════════════════
+class ApplicationLayer {
+    attr String name;
+    val ApplicationService[*] services;
+}
+
+class ApplicationService {
+    attr String  name;
+    val UseCase[*] useCases;
+}
+
+class UseCase {
+    attr String name;
+    val Attribute[*] input;
+    val Attribute[*] output;
+}
+
+// ══════════════════════════════════════════
+// CAPA DE DOMINIO
+// Lógica de negocio pura, sin dependencias externas.
+// ══════════════════════════════════════════
+class DomainCore {
+    attr String name;
+    val AggregateRoot[*]  aggregates;
+    val DomainService[*]  domainServices;
+    val DomainEvent[*]    events;
+}
+
+abstract class DomainObject {
+    attr String name;
+    val Attribute[*] values;
+}
+
+class Attribute {
+    attr String name;
+    attr String type;
+}
+
+class AggregateRoot extends DomainObject {
+    val Entity[*] internalEntities;
+    val ValueObject[*] attributes;
+}
+
+class Entity extends DomainObject {
+    val ValueObject[*] attributes;
+}
+
+class ValueObject extends DomainObject {}
+
+// DomainService: lógica de negocio que no pertenece
+// naturalmente a ningún agregado
+class DomainService {
+    attr String name;
+    val Attribute[*] operations;
+}
+
+// DomainEvent: algo que ocurrió en el dominio
+// y que otros componentes pueden escuchar
+class DomainEvent {
+    attr String name;
+    attr String occurredOn;
+    val Attribute[*] payload;
+}
+
+// ══════════════════════════════════════════
+// CLASES DE RELACIÓN (instanciables)
+// ══════════════════════════════════════════
+abstract class HexagonLink {
+    attr String name;
+    attr String description;
+}
+
+// Infraestructura: conecta Adapter con su Port
+class AdapterPortLink extends HexagonLink {
+    ref Adapter[1] source;
+    ref Port[1]    target;
+}
+
+// Infraestructura: conecta ExternalSystem con el Adapter
+class ExternalSystemLink extends HexagonLink {
+    ref ExternalSystem[1] source;
+    ref Adapter[1]        target;
+}
+
+// Aplicación ↔ Infraestructura: servicio expone o llama un puerto
+class ServicePortLink extends HexagonLink {
+    ref ApplicationService[1] source;
+    ref Port[1]               target;
+}
+
+// Aplicación → Dominio: servicio coordina un agregado
+class ServiceAggregateLink extends HexagonLink {
+    ref ApplicationService[1] source;
+    ref AggregateRoot[1]      target;
+}
+
+// Aplicación → Dominio: servicio invoca un servicio de dominio
+class ServiceDomainServiceLink extends HexagonLink {
+    ref ApplicationService[1] source;
+    ref DomainService[1]      target;
+}

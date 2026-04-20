@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hexagonal_ddd:Hexagon
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:hexagonal_ddd="http://co.edu.unicauca.hexagen.hexagonal"
+    xmi:id="hexagon_1"
+    name="">
+    <!--
+      VIOLA V2: name está vacío.
+      Todo Hexagon debe tener un nombre no vacío.
+    -->
+
+  <!-- ══════════════════════════════════════
+       INFRASTRUCTURE LAYER
+       ══════════════════════════════════════ -->
+  <infrastructure xmi:id="infra_1" name="InfraestructuraBiblioteca">
+
+    <!-- Puerto de entrada -->
+    <ports xsi:type="hexagonal_ddd:InboundPort"
+           xmi:id="port_inbound_1"
+           name="IPrestamoService"/>
+
+    <!-- Puerto de salida referenciado correctamente -->
+    <ports xsi:type="hexagonal_ddd:OutboundPort"
+           xmi:id="port_outbound_1"
+           name="IPrestamoRepository"/>
+
+    <!--
+      Puerto HUÉRFANO — VIOLA V14:
+      port_outbound_2 nunca aparece como target
+      en ningún AdapterPortLink ni ServicePortLink.
+    -->
+    <ports xsi:type="hexagonal_ddd:OutboundPort"
+           xmi:id="port_outbound_2"
+           name="INotificacionSocioService"/>
+
+    <!-- Adaptador de entrada -->
+    <adapters xsi:type="hexagonal_ddd:InboundAdapter"
+              xmi:id="adapter_inbound_1"
+              name="PrestamoRestController"/>
+
+    <!-- Adaptador de salida correcto -->
+    <adapters xsi:type="hexagonal_ddd:OutboundAdapter"
+              xmi:id="adapter_outbound_1"
+              name="JpaPrestamoRepository"/>
+
+    <!--
+      Adaptador HUÉRFANO — VIOLA V11:
+      adapter_outbound_2 no tiene ningún AdapterPortLink
+      que lo referencie como source.
+    -->
+    <adapters xsi:type="hexagonal_ddd:OutboundAdapter"
+              xmi:id="adapter_outbound_2"
+              name="EmailNotificacionAdapter"/>
+
+  </infrastructure>
+
+  <!-- ══════════════════════════════════════
+       APPLICATION LAYER
+       ══════════════════════════════════════ -->
+  <application xmi:id="app_1" name="AplicacionBiblioteca">
+
+    <!--
+      VIOLA V7: ApplicationService sin ningún UseCase.
+      Un servicio de aplicación sin casos de uso no orquesta nada.
+    -->
+    <services xmi:id="svc_1" name="PrestamoApplicationService"/>
+
+    <services xmi:id="svc_2" name="ReporteService">
+
+      <!--
+        VIOLA V10 (UseCase sin input):
+        GenerarReportePrestamos no tiene atributos de entrada,
+        por lo que no recibe ninguna intención del usuario.
+      -->
+      <useCases xmi:id="uc_1" name="GenerarReportePrestamos">
+        <output xmi:id="attr_uc1_out1" name="reporte" type="String"/>
+      </useCases>
+
+      <!--
+        VIOLA Attribute.TipoNoDeCapa:
+        El input usa HttpRequest, un tipo de infraestructura
+        que no debe aparecer en atributos del dominio/aplicación.
+      -->
+      <useCases xmi:id="uc_2" name="ProcesarSolicitudPrestamo">
+        <input  xmi:id="attr_uc2_in1"  name="solicitud" type="HttpRequest"/>
+        <output xmi:id="attr_uc2_out1" name="resultado"  type="String"/>
+      </useCases>
+
+    </services>
+
+  </application>
+
+  <!-- ══════════════════════════════════════
+       DOMAIN CORE
+       ══════════════════════════════════════ -->
+  <domain xmi:id="domain_1" name="DominioBiblioteca">
+
+    <!--
+      VIOLA V3: AggregateRoot vacío.
+      Prestamo no tiene ninguna Entity ni ValueObject interno.
+      Un agregado vacío no modela ningún concepto de negocio.
+    -->
+    <aggregates xmi:id="aggr_prestamo" name="Prestamo"/>
+
+    <!-- AggregateRoot válido para que el DomainCore no falle en ContieneAgregados -->
+    <aggregates xmi:id="aggr_socio" name="Socio">
+      <attributes xmi:id="vo_email" name="Email">
+        <values xmi:id="attr_email_valor" name="valor" type="String"/>
+      </attributes>
+    </aggregates>
+
+    <!--
+      VIOLA V5 (nombre genérico) y V5 (sin operaciones):
+      "Manager" es un nombre genérico prohibido.
+      Además no tiene ninguna operación definida.
+    -->
+    <domainServices xmi:id="ds_1" name="Manager"/>
+
+    <!--
+      VIOLA V6 (nombre en presente) + V6 (sin occurredOn) + V6 (payload vacío):
+      "RealizarPrestamo" está en infinitivo, no en pasado.
+      No tiene occurredOn definido.
+      No tiene ningún atributo en payload.
+    -->
+    <events xmi:id="evt_1"
+            name="RealizarPrestamo"
+            occurredOn="">
+      <!-- payload vacío — viola PayloadNoVacio -->
+    </events>
+
+  </domain>
+
+  <!-- ══════════════════════════════════════
+       HEXAGON LINKS
+       ══════════════════════════════════════ -->
+
+  <!--
+    VIOLA V12: InboundAdapter vinculado a OutboundPort.
+    PrestamoRestController es InboundAdapter pero apunta
+    a IPrestamoRepository que es OutboundPort.
+    Los tipos de flujo de entrada y salida no pueden mezclarse.
+  -->
+  <links xsi:type="hexagonal_ddd:AdapterPortLink"
+         xmi:id="link_1"
+         name="REST-to-IPrestamoRepository-INVALIDO"
+         description="Error: InboundAdapter apuntando a OutboundPort"
+         source="adapter_inbound_1"
+         target="port_outbound_1"/>
+
+  <!-- AdapterPortLink correcto para el adaptador de salida -->
+  <links xsi:type="hexagonal_ddd:AdapterPortLink"
+         xmi:id="link_2"
+         name="JPA-to-IPrestamoRepository"
+         source="adapter_outbound_1"
+         target="port_outbound_1"/>
+
+  <!--
+    VIOLA V13: ExternalSystemLink apunta a un DomainService
+    en vez de a un Adapter.
+    ExternalSystem nunca debe acceder directamente al dominio.
+  -->
+  <links xsi:type="hexagonal_ddd:ExternalSystemLink"
+         xmi:id="link_3"
+         name="SistemaExterno-to-DomainService-INVALIDO"
+         description="Error: ExternalSystem apuntando directo al dominio"
+         source="ext_sistema_catalogo"
+         target="ds_1"/>
+
+  <!--
+    ServicePortLink apunta a port_inbound_1
+    (este link es válido para que svc_2 tenga cobertura de puerto)
+  -->
+  <links xsi:type="hexagonal_ddd:ServicePortLink"
+         xmi:id="link_4"
+         name="ReporteSvc-expone-IPrestamoService"
+         source="svc_2"
+         target="port_inbound_1"/>
+
+  <!--
+    ServiceAggregateLink válido (para que svc_2 tenga un agregado)
+    pero svc_1 (el que viola V7) no tiene ningún link de agregado.
+  -->
+  <links xsi:type="hexagonal_ddd:ServiceAggregateLink"
+         xmi:id="link_5"
+         name="ReporteSvc-coordina-Socio"
+         source="svc_2"
+         target="aggr_socio"/>
+
+</hexagonal_ddd:Hexagon>
