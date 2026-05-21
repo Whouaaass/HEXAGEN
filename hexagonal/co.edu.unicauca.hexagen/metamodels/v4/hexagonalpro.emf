@@ -10,6 +10,7 @@ class Hexagon {
     val ApplicationLayer[1] application;
     val DomainCore[1] domain;
     val HexagonLink[*] links; 
+    val ExternalSystem[*] externalSystems;
 }
 
 // ══════════════════════════════════════════
@@ -57,10 +58,15 @@ class ApplicationService {
     val UseCase[*] useCases;
 }
 
+class UseCaseParameter {
+    attr String name;
+    attr String type;
+}
+
 class UseCase {
     attr String name;
-    val Attribute[*] input;
-    val Attribute[*] output;
+   	val UseCaseParameter[*] input;
+    val UseCaseParameter[*] output;
 }
 
 // ══════════════════════════════════════════
@@ -72,34 +78,36 @@ class DomainCore {
     val AggregateRoot[*]  aggregates;
     val DomainService[*]  domainServices;
     val DomainEvent[*]    events;
+    val DomainObject[*]   objects;
 }
 
 abstract class DomainObject {
     attr String name;
-    val Attribute[*] values;
 }
 
-class Attribute {
-    attr String name;
+class Attribute extends DomainObject{
     attr String type;
 }
 
 class AggregateRoot extends DomainObject {
-    val Entity[*] internalEntities;
-    val ValueObject[*] attributes;
+    val DomainObject[*] members;
 }
 
 class Entity extends DomainObject {
-    val ValueObject[*] attributes;
 }
 
 class ValueObject extends DomainObject {}
 
 // DomainService: lógica de negocio que no pertenece
 // naturalmente a ningún agregado
+
+class DomainOperation extends DomainObject {
+    attr String returnType;
+}
+
 class DomainService {
     attr String name;
-    val Attribute[*] operations;
+    val DomainOperation[*] operations;
 }
 
 // DomainEvent: algo que ocurrió en el dominio

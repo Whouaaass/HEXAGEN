@@ -1,13 +1,14 @@
 /**
-* hexagonalpro Validation Module
-*
-* Restricciones que garantizan que cualquier instancia del modelo sea correcta
-*/
+ * hexagonalpro Validation Module
+ * Restricciones que garantizan que cualquier instancia del modelo sea correcta
+ * Metamodelo: Hexagonal DDD (HAD) — versión actualizada
+ */
 
 /**
-HEXAGON — estructura global
+-- ═══════════════════════════════════════════════════════════
+-- HEXAGON — estructura global
+-- ═══════════════════════════════════════════════════════════
 */
-
 context Hexagon {
 
     constraint CapasCompletas {
@@ -27,8 +28,11 @@ context Hexagon {
 }
 
 /**
+-- ═══════════════════════════════════════════════════════════
 -- DOMAINCORE — reglas de dominio puro
+-- ═══════════════════════════════════════════════════════════
 */
+
 context DomainCore {
 
     constraint NombreValido {
@@ -37,15 +41,33 @@ context DomainCore {
         message: "DomainCore debe tener un nombre no vacío."
     }
 
-    /** Un DomainCore sin agregados no modela ningún negocio*/
     constraint ContieneAgregados {
         check: self.aggregates.size() >= 1
         message: "DomainCore '" + self.name +
             "' debe contener al menos un AggregateRoot."
     }
+
+    /**Dominio aislado: no puede referenciar capas externas*/
+    constraint DominioAislado {
+        check: not self.aggregates->exists(a |
+                ApplicationService.allInstances()->includes(a)
+                or Adapter.allInstances()->includes(a)
+                or Port.allInstances()->includes(a))
+            and not self.domainServices->exists(ds |
+                ApplicationService.allInstances()->includes(ds)
+                or Adapter.allInstances()->includes(ds))
+        message: "DomainCore '" + self.name +
+            "' contiene referencias a elementos de ApplicationLayer " +
+            "o InfrastructureLayer. El dominio no puede conocer " +
+            "ninguna capa externa — es la regla fundamental de DDD."
+    }
 }
 
-/** AggregateRoot no vacío*/
+/**
+-- ═══════════════════════════════════════════════════════════
+-- AGGREGATEROOT
+-- ═══════════════════════════════════════════════════════════
+*/
 context AggregateRoot {
 
     constraint NombreValido {
@@ -54,30 +76,45 @@ context AggregateRoot {
         message: "Todo AggregateRoot debe tener un nombre no vacío."
     }
 
-    /** Debe tener al menos una Entity o ValueObject*/
+/**
+     CORREGIDO: antes usaba internalEntities y attributes,
+     ahora el metamodelo unifica todo en members: DomainObject[*]*/
     constraint AgregadoNoVacio {
-        check: self.internalEntities.size() >= 1
-            or self.attributes.size() >= 1
+        check: self.members.size() >= 1
         message: "AggregateRoot '" + self.name +
-            "' debe contener al menos una Entity o un ValueObject. " +
+            "' debe contener al menos un miembro DomainObject. " +
             "Un agregado vacío no modela ningún concepto de negocio."
     }
 
-    /** Los nombres de entidades internas deben ser únicos dentro del agregado*/
-    constraint EntidadesConNombreUnico {
-        check: self.internalEntities
-            .collect(e | e.name)
+    /** Al menos un miembro debe ser Entity o ValueObject*/
+    constraint AgregadoConEntidadOValor {
+        check: self.members->exists(m |
+            m.isTypeOf(Entity) or m.isTypeOf(ValueObject))
+        message: "AggregateRoot '" + self.name +
+            "' debe contener al menos una Entity o un ValueObject. " +
+            "Un agregado solo de atributos no representa un concepto de negocio."
+    }
+
+    /** Nombres únicos dentro de members*/
+    constraint MiembrosConNombreUnico {
+        check: self.members
+            .collect(m | m.name)
             .size() =
-               self.internalEntities
-            .collect(e | e.name)
+               self.members
+            .collect(m | m.name)
             .asSet()
             .size()
         message: "AggregateRoot '" + self.name +
-            "' tiene entidades internas con nombres duplicados."
+            "' tiene miembros con nombres duplicados."
     }
 }
 
-/** Entity y ValueObject solo dentro de AggregateRoot*/
+/**
+-- ═══════════════════════════════════════════════════════════
+-- DOMAINOBJECT — subclases: Entity, ValueObject, Attribute,
+--                DomainOperation
+-- ═══════════════════════════════════════════════════════════
+*/
 
 context Entity {
 
@@ -87,13 +124,13 @@ context Entity {
         message: "Toda Entity debe tener un nombre no vacío."
     }
 
-    /** Entity solo puede existir contenida en un AggregateRoot*/
+    /** CORREGIDO: antes verificaba internalEntities, ahora members*/
     constraint SoloEnAgregado {
         check: AggregateRoot.allInstances()
-            ->exists(a | a.internalEntities->includes(self))
+            ->exists(a | a.members->includes(self))
         message: "Entity '" + self.name +
             "' debe estar contenida dentro de un AggregateRoot. " +
-            "Las entidades no pueden existir sueltas fuera del agregado."
+            "Las entidades no pueden existir fuera del agregado."
     }
 }
 
@@ -105,17 +142,74 @@ context ValueObject {
         message: "Todo ValueObject debe tener un nombre no vacío."
     }
 
-    /** ValueObject solo puede existir contenido en un AggregateRoot*/
+    /** CORREGIDO: antes verificaba attributes, ahora members*/
     constraint SoloEnAgregado {
         check: AggregateRoot.allInstances()
-            ->exists(a | a.attributes->includes(self))
+            ->exists(a | a.members->includes(self))
+            or DomainCore.allInstances()
+            ->exists(d | d.objects->includes(self))
         message: "ValueObject '" + self.name +
-            "' debe estar contenido dentro de un AggregateRoot. " +
-            "Los objetos de valor no pueden existir fuera de su agregado."
+            "' debe estar contenido dentro de un AggregateRoot " +
+            "o registrado en DomainCore.objects."
     }
 }
 
-/** DomainService y DomainEvent aislados*/
+context Attribute {
+
+    constraint NombreYTipoValidos {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+            and self.type.isDefined()
+            and self.type.trim().length() > 0
+        message: "Attribute '" + self.name +
+            "' debe tener name y type definidos y no vacíos."
+    }
+
+    /** Tipos de infraestructura no permitidos en el dominio*/
+    constraint TipoNoDeCapa {
+        check: not Sequence{
+                "HttpRequest", "HttpResponse", "EntityManager",
+                "DataSource", "Connection", "HttpServletRequest"}
+            ->exists(t | self.type = t)
+        message: "Attribute '" + self.name +
+            "' usa el tipo '" + self.type +
+            "' que pertenece a infraestructura. " +
+            "Los atributos del dominio solo pueden usar tipos primitivos " +
+            "o tipos propios del dominio."
+    }
+}
+
+/** NUEVO: DomainOperation es ahora subclase de DomainObject*/
+context DomainOperation {
+
+    constraint NombreValido {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+        message: "Toda DomainOperation debe tener un nombre no vacío."
+    }
+
+    constraint ReturnTypeValido {
+        check: self.returnType.isDefined()
+            and self.returnType.trim().length() > 0
+        message: "DomainOperation '" + self.name +
+            "' debe tener un returnType definido y no vacío."
+    }
+
+    /** Solo puede existir dentro de un DomainService*/
+    constraint SoloEnDomainService {
+        check: DomainService.allInstances()
+            ->exists(ds | ds.operations->includes(self))
+        message: "DomainOperation '" + self.name +
+            "' debe estar contenida dentro de un DomainService."
+    }
+}
+
+/**
+-- ═══════════════════════════════════════════════════════════
+-- DOMAINSERVICE
+-- ═══════════════════════════════════════════════════════════
+*/
+
 context DomainService {
 
     constraint NombreValido {
@@ -124,23 +218,19 @@ context DomainService {
         message: "Todo DomainService debe tener un nombre no vacío."
     }
 
-    /** DomainService debe tener al menos una operación definida*/
     constraint ConOperaciones {
         check: self.operations.size() >= 1
         message: "DomainService '" + self.name +
             "' debe tener al menos una operación definida. " +
             "Un servicio de dominio sin operaciones no encapsula ninguna regla."
     }
-
-    /** El nombre debe estar en lenguaje ubicuo (no puede ser genérico)
-    constraint NombreEnLenguajeUbicuo {
-        check: not Sequence{"Service", "Manager", "Handler", "Helper", "Util"}
-            ->exists(sufijo | self.name = sufijo)
-        message: "DomainService '" + self.name +
-            "' tiene un nombre genérico. Debe reflejar " +
-            "una regla de negocio concreta con lenguaje ubicuo."
-    }*/
 }
+
+/**
+-- ═══════════════════════════════════════════════════════════
+-- DOMAINEVENT
+-- ═══════════════════════════════════════════════════════════
+*/ 
 
 context DomainEvent {
 
@@ -150,16 +240,14 @@ context DomainEvent {
         message: "Todo DomainEvent debe tener un nombre no vacío."
     }
 
-    /** Debe tener marca temporal definida*/
     constraint OcurridoEnDefinido {
         check: self.occurredOn.isDefined()
             and self.occurredOn.trim().length() > 0
         message: "DomainEvent '" + self.name +
             "' debe tener el campo occurredOn definido. " +
-            "Todo evento debe registrar cuándo ocurrió para garantizar trazabilidad."
+            "Todo evento debe registrar cuándo ocurrió."
     }
 
-    //** Debe llevar al menos un dato en el payload*/
     constraint PayloadNoVacio {
         check: self.payload.size() >= 1
         message: "DomainEvent '" + self.name +
@@ -169,8 +257,11 @@ context DomainEvent {
 }
 
 /**
-APPLICATIONLAYER — orquestación sin lógica
+-- ═══════════════════════════════════════════════════════════
+-- APPLICATIONLAYER
+-- ═══════════════════════════════════════════════════════════
 */
+
 context ApplicationLayer {
 
     constraint NombreValido {
@@ -184,9 +275,22 @@ context ApplicationLayer {
         message: "ApplicationLayer '" + self.name +
             "' debe contener al menos un ApplicationService."
     }
+
+    constraint AppSoloComunicaViaLinks {
+        check: not self.services->exists(svc |
+                Adapter.allInstances()->exists(a | svc = a)
+                or Port.allInstances()->exists(p | svc = p))
+        message: "ApplicationLayer '" + self.name +
+            "' contiene referencias directas a InfrastructureLayer. " +
+            "La comunicación entre capas debe hacerse vía HexagonLink."
+    }
 }
 
-/** ApplicationService*/
+/**
+-- ═══════════════════════════════════════════════════════════
+-- APPLICATIONSERVICE y USECASE
+-- ═══════════════════════════════════════════════════════════
+*/
 
 context ApplicationService {
 
@@ -196,15 +300,12 @@ context ApplicationService {
         message: "Todo ApplicationService debe tener un nombre no vacío."
     }
 
-    /** Debe tener al menos un caso de uso*/
     constraint ConCasosDeUso {
         check: self.useCases.size() >= 1
         message: "ApplicationService '" + self.name +
-            "' debe tener al menos un UseCase. " +
-            "Un servicio de aplicación sin casos de uso no orquesta nada."
+            "' debe tener al menos un UseCase."
     }
 
-    //** Los nombres de casos de uso deben ser únicos dentro del servicio*/
     constraint CasosDeUsoConNombreUnico {
         check: self.useCases
             .collect(u | u.name)
@@ -218,8 +319,6 @@ context ApplicationService {
     }
 }
 
-/** UseCase*/
-
 context UseCase {
 
     constraint NombreValido {
@@ -228,25 +327,41 @@ context UseCase {
         message: "Todo UseCase debe tener un nombre no vacío."
     }
 
-    /** Todo caso de uso debe tener al menos un input definido*/
     constraint ConInput {
         check: self.input.size() >= 1
         message: "UseCase '" + self.name +
-            "' debe tener al menos un atributo de entrada. " +
-            "Un caso de uso sin input no recibe ninguna intención del usuario."
+            "' debe tener al menos un atributo de entrada."
     }
 
-    /** Todo caso de uso debe tener al menos un output definido*/
     constraint ConOutput {
         check: self.output.size() >= 1
         message: "UseCase '" + self.name +
-            "' debe tener al menos un atributo de salida. " +
-            "Un caso de uso sin output no comunica resultado alguno."
+            "' debe tener al menos un atributo de salida."
     }
 }
 
-/** 
-INFRASTRUCTURELAYER — puertos y adaptadores
+/**
+-- NUEVO: UseCaseParameter reemplaza Attribute en la capa de aplicación*/
+context UseCaseParameter {
+
+    constraint NombreValido {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+        message: "Todo UseCaseParameter debe tener un nombre no vacío."
+    }
+
+    constraint TipoValido {
+        check: self.type.isDefined()
+            and self.type.trim().length() > 0
+        message: "UseCaseParameter '" + self.name +
+            "' debe tener un type definido y no vacío."
+    }
+}
+
+/**
+-- ═══════════════════════════════════════════════════════════
+-- INFRASTRUCTURELAYER — puertos y adaptadores
+-- ═══════════════════════════════════════════════════════════
 */
 context InfrastructureLayer {
 
@@ -256,102 +371,18 @@ context InfrastructureLayer {
         message: "InfrastructureLayer debe tener un nombre no vacío."
     }
 
-    /** Debe haber al menos un puerto de entrada*/
     constraint ConPuertoDeEntrada {
-        check: self.ports
-            ->exists(p | p.isTypeOf(InboundPort))
+        check: self.ports->exists(p | p.isTypeOf(InboundPort))
         message: "InfrastructureLayer '" + self.name +
-            "' debe tener al menos un InboundPort. " +
-            "Sin puertos de entrada el hexágono no recibe interacciones."
+            "' debe tener al menos un InboundPort."
     }
 
-    /** Debe haber al menos un adaptador*/
     constraint ConAdaptadores {
         check: self.adapters.size() >= 1
         message: "InfrastructureLayer '" + self.name +
             "' debe tener al menos un Adapter."
     }
 }
-
-/** Adapter*/
-
-context Adapter {
-
-    constraint NombreValido {
-        check: self.name.isDefined()
-            and self.name.trim().length() > 0
-        message: "Todo Adapter debe tener un nombre no vacío."
-    }
-
-    /** Todo Adapter debe estar referenciado por exactamente un AdapterPortLink(instancia de relacion)*/
-    constraint VinculadoAUnPuerto {
-        check: AdapterPortLink.allInstances()
-            ->select(l | l.source = self)
-            ->size() = 1
-        message: "Adapter '" + self.name +
-            "' debe estar vinculado a exactamente un Port " +
-            "mediante AdapterPortLink. Un adaptador sin puerto es un componente huérfano."
-    }
-}
-
-/** tipo de flujo consistente en AdapterPortLink*/
-
-context AdapterPortLink {
-
-    constraint NombreValido {
-        check: self.name.isDefined()
-            and self.name.trim().length() > 0
-        message: "Todo AdapterPortLink debe tener un nombre no vacío."
-    }
-
-    /** InboundAdapter solo con InboundPort, OutboundAdapter solo con OutboundPort*/
-    constraint TiposDeFlujoConsistentes {
-        check: (self.source.isTypeOf(InboundAdapter)
-                    implies self.target.isTypeOf(InboundPort))
-            and (self.source.isTypeOf(OutboundAdapter)
-                    implies self.target.isTypeOf(OutboundPort))
-        message: "AdapterPortLink '" + self.name +
-            "': InboundAdapter solo puede vincularse con InboundPort " +
-            "y OutboundAdapter solo con OutboundPort. " +
-            "Los tipos de flujo de entrada y salida no pueden mezclarse."
-    }
-
-   /** source y target deben estar definidos*/
-    constraint SourceYTargetDefinidos {
-        check: self.source.isDefined()
-            and self.target.isDefined()
-        message: "AdapterPortLink '" + self.name +
-            "' debe tener source y target definidos."
-    }
-}
-
-/** ExternalSystemLink solo conecta a Adapter (instancia de relacion)*/
-context ExternalSystemLink {
-
-    constraint NombreValido {
-        check: self.name.isDefined()
-            and self.name.trim().length() > 0
-        message: "Todo ExternalSystemLink debe tener un nombre no vacío."
-    }
-
-    /** target debe ser un Adapter (nunca dominio o aplicación)*/
-    constraint ExternoSoloViaAdaptador {
-        check: self.target.isKindOf(Adapter)
-        message: "ExternalSystemLink '" + self.name +
-            "': el target debe ser un Adapter. " +
-            "Un ExternalSystem nunca puede acceder directamente " +
-            "al dominio ni a la capa de aplicación."
-    }
-
-    constraint SourceYTargetDefinidos {
-        check: self.source.isDefined()
-            and self.target.isDefined()
-        message: "ExternalSystemLink '" + self.name +
-            "' debe tener source y target definidos."
-    }
-}
-
-/** Port debe ser usado por al menos un link*/
 
 context Port {
 
@@ -361,54 +392,88 @@ context Port {
         message: "Todo Port debe tener un nombre no vacío."
     }
 
-    /** Todo Port debe aparecer como target en al menos un link*/
     constraint PuertoReferenciado {
         check: AdapterPortLink.allInstances()
                 ->exists(l | l.target = self)
             or ServicePortLink.allInstances()
                 ->exists(l | l.target = self)
         message: "Port '" + self.name +
-            "' no está referenciado por ningún AdapterPortLink " +
-            "ni ServicePortLink. Un puerto sin uso no cumple ninguna función " +
-            "en la arquitectura hexagonal."
+            "' no está referenciado por ningún link. " +
+            "Un puerto sin uso no cumple ninguna función."
     }
 }
 
-/**
-CLASES DE RELACIÓN — integridad referencial
-*/
-
-/** ServiceAggregateLink dentro del mismo Hexagon */
-
-context ServiceAggregateLink {
+context Adapter {
 
     constraint NombreValido {
         check: self.name.isDefined()
             and self.name.trim().length() > 0
-        message: "Todo ServiceAggregateLink debe tener un nombre no vacío."
+        message: "Todo Adapter debe tener un nombre no vacío."
+    }
+
+    constraint VinculadoAUnPuerto {
+        check: AdapterPortLink.allInstances()
+            ->select(l | l.source = self)
+            ->size() = 1
+        message: "Adapter '" + self.name +
+            "' debe estar vinculado a exactamente un Port " +
+            "mediante AdapterPortLink."
+    }
+}
+
+/**
+-- ═══════════════════════════════════════════════════════════
+-- CLASES DE RELACIÓN — integridad referencial
+-- ═══════════════════════════════════════════════════════════
+*/
+context AdapterPortLink {
+
+    constraint NombreValido {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+        message: "Todo AdapterPortLink debe tener un nombre no vacío."
+    }
+
+    constraint TiposDeFlujoConsistentes {
+        check: (self.source.isTypeOf(InboundAdapter)
+                    implies self.target.isTypeOf(InboundPort))
+            and (self.source.isTypeOf(OutboundAdapter)
+                    implies self.target.isTypeOf(OutboundPort))
+        message: "AdapterPortLink '" + self.name +
+            "': InboundAdapter solo con InboundPort y " +
+            "OutboundAdapter solo con OutboundPort."
     }
 
     constraint SourceYTargetDefinidos {
         check: self.source.isDefined()
             and self.target.isDefined()
-        message: "ServiceAggregateLink '" + self.name +
+        message: "AdapterPortLink '" + self.name +
             "' debe tener source y target definidos."
-    }
-
-    /** El AggregateRoot debe pertenecer al DomainCore del mismo Hexagon*/
-    constraint AgregadoEnMismoHexagon {
-        check: Hexagon.allInstances()
-            ->exists(h |
-                h.links->includes(self)
-                and h.domain.aggregates->includes(self.target))
-        message: "ServiceAggregateLink '" + self.name +
-            "': el AggregateRoot referenciado debe pertenecer " +
-            "al DomainCore del mismo Hexagon. No se pueden coordinar " +
-            "agregados de otros bounded contexts directamente."
     }
 }
 
-/** ServicePortLink dentro del mismo Hexagon*/
+context ExternalSystemLink {
+
+    constraint NombreValido {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+        message: "Todo ExternalSystemLink debe tener un nombre no vacío."
+    }
+
+    constraint ExternoSoloViaAdaptador {
+        check: self.target.isKindOf(Adapter)
+        message: "ExternalSystemLink '" + self.name +
+            "': el target debe ser un Adapter. " +
+            "Un ExternalSystem nunca accede directamente al dominio."
+    }
+
+    constraint SourceYTargetDefinidos {
+        check: self.source.isDefined()
+            and self.target.isDefined()
+        message: "ExternalSystemLink '" + self.name +
+            "' debe tener source y target definidos."
+    }
+}
 
 context ServicePortLink {
 
@@ -425,19 +490,42 @@ context ServicePortLink {
             "' debe tener source y target definidos."
     }
 
-    /** el Port debe pertenecer al InfrastructureLayer del mismo Hexagon*/
     constraint PuertoEnMismoHexagon {
         check: Hexagon.allInstances()
             ->exists(h |
                 h.links->includes(self)
                 and h.infrastructure.ports->includes(self.target))
         message: "ServicePortLink '" + self.name +
-            "': el Port referenciado debe pertenecer al " +
-            "InfrastructureLayer del mismo Hexagon."
+            "': el Port debe pertenecer al InfrastructureLayer " +
+            "del mismo Hexagon."
     }
 }
 
-/** ServiceDomainServiceLink*/
+context ServiceAggregateLink {
+
+    constraint NombreValido {
+        check: self.name.isDefined()
+            and self.name.trim().length() > 0
+        message: "Todo ServiceAggregateLink debe tener un nombre no vacío."
+    }
+
+    constraint SourceYTargetDefinidos {
+        check: self.source.isDefined()
+            and self.target.isDefined()
+        message: "ServiceAggregateLink '" + self.name +
+            "' debe tener source y target definidos."
+    }
+
+    constraint AgregadoEnMismoHexagon {
+        check: Hexagon.allInstances()
+            ->exists(h |
+                h.links->includes(self)
+                and h.domain.aggregates->includes(self.target))
+        message: "ServiceAggregateLink '" + self.name +
+            "': el AggregateRoot debe pertenecer al DomainCore " +
+            "del mismo Hexagon."
+    }
+}
 
 context ServiceDomainServiceLink {
 
@@ -454,79 +542,13 @@ context ServiceDomainServiceLink {
             "' debe tener source y target definidos."
     }
 
-    /** El DomainService debe pertenecer al DomainCore del mismo Hexagon*/
     constraint DomainServiceEnMismoHexagon {
         check: Hexagon.allInstances()
             ->exists(h |
                 h.links->includes(self)
                 and h.domain.domainServices->includes(self.target))
         message: "ServiceDomainServiceLink '" + self.name +
-            "': el DomainService referenciado debe pertenecer " +
-            "al DomainCore del mismo Hexagon."
-    }
-}
-
-/**
- dirección de dependencias
-*/
-
-context DomainCore {
-
-    /** DomainCore no puede referenciar nada de ApplicationLayer ni InfrastructureLayer*/
-    constraint DominioAislado {
-        check: not self.aggregates->exists(a |
-                ApplicationService.allInstances()->includes(a)
-                or Adapter.allInstances()->includes(a)
-                or Port.allInstances()->includes(a))
-            and not self.domainServices->exists(ds |
-                ApplicationService.allInstances()->includes(ds)
-                or Adapter.allInstances()->includes(ds))
-        message: "DomainCore '" + self.name +
-            "' contiene referencias a elementos de ApplicationLayer " +
-            "o InfrastructureLayer. El dominio no puede conocer " +
-            "ninguna capa externa — es la regla fundamental de DDD."
-    }
-}
-
-context ApplicationLayer {
-
-    /** ApplicationLayer solo se comunica con InfrastructureLayer a través de HexagonLink*/
-    constraint AppSoloComunicaViaLinks {
-        check: not self.services->exists(svc |
-                Adapter.allInstances()->exists(a |
-                    svc = a)
-                or Port.allInstances()->exists(p |
-                    svc = p))
-        message: "ApplicationLayer '" + self.name +
-            "' contiene referencias directas a elementos de " +
-            "InfrastructureLayer. La comunicación entre capas " +
-            "debe hacerse exclusivamente a través de HexagonLink."
-    }
-}
-
-/** Attribute: validación transversal*/
-
-context Attribute {
-
-    constraint NombreYTipoValidos {
-        check: self.name.isDefined()
-            and self.name.trim().length() > 0
-            and self.type.isDefined()
-            and self.type.trim().length() > 0
-        message: "Attribute '" + self.name +
-            "' debe tener name y type definidos y no vacíos."
-    }
-
-    /** El type no debe ser un tipo de infraestructura*/
-    constraint TipoNoDeCapa {
-        check: not Sequence{
-                "HttpRequest", "HttpResponse", "EntityManager",
-                "DataSource", "Connection", "HttpServletRequest"}
-            ->exists(t | self.type = t)
-        message: "Attribute '" + self.name +
-            "' usa el tipo '" + self.type +
-            "' que pertenece a infraestructura. " +
-            "Los atributos del dominio solo pueden usar tipos primitivos " +
-            "o tipos propios del dominio."
+            "': el DomainService debe pertenecer al DomainCore " +
+            "del mismo Hexagon."
     }
 }
