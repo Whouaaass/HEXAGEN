@@ -1,0 +1,176 @@
+-- ============================================================
+-- HEXAGEN-SMM Well-Formedness Constraints
+-- Metamodel: smm (Hexagonal Architecture Spring Boot Metamodel)
+-- Conforms to: WFC-01 through WFC-25 in the Technical Report
+-- ============================================================
+
+-- WFC-01: Application must have a non-empty name
+context Application {
+    constraint ApplicationHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Application must have a non-empty name."
+    }
+
+    -- WFC-02: Application must have a non-empty basePackage
+    constraint ApplicationHasBasePackage {
+        check : self.basePackage.isDefined() and self.basePackage.trim().length() > 0
+        message : "Application '" + self.name + "' must have a non-empty basePackage."
+    }
+
+    -- WFC-03: Application must contain at least one BoundedContext
+    constraint ApplicationHasContexts {
+        check : self.contexts.size() > 0
+        message : "Application '" + self.name + "' must contain at least one BoundedContext."
+    }
+}
+
+-- WFC-04: BoundedContext must have a non-empty name
+context BoundedContext {
+    constraint BoundedContextHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every BoundedContext must have a non-empty name."
+    }
+}
+
+-- WFC-05 and WFC-06: Entity constraints
+context Entity {
+    constraint EntityHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Entity must have a non-empty name."
+    }
+
+    constraint EntityHasIdType {
+        check : self.idType.isDefined()
+        message : "Entity '" + self.name + "' must have a defined idType."
+    }
+}
+
+-- WFC-07 and WFC-08: RepositoryPort constraints
+context RepositoryPort {
+    constraint RepositoryPortHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every RepositoryPort must have a non-empty name."
+    }
+
+    constraint RepositoryPortHasEntityType {
+        check : self.entityType.isDefined()
+        message : "RepositoryPort '" + self.name + "' must reference an Entity via entityType."
+    }
+}
+
+-- WFC-09 and WFC-10: Service constraints
+context Service {
+    constraint ServiceHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Service must have a non-empty name."
+    }
+
+    constraint ServiceHasRequiredPorts {
+        check : self.requiredPorts.size() > 0
+        message : "Service '" + self.name + "' must reference at least one RepositoryPort via requiredPorts."
+    }
+}
+
+-- WFC-11, WFC-12, WFC-13: Controller constraints
+context Controller {
+    constraint ControllerHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Controller must have a non-empty name."
+    }
+
+    constraint ControllerHasBasePath {
+        check : self.basePath.isDefined() and self.basePath.trim().length() > 0
+        message : "Controller '" + self.name + "' must have a non-empty basePath."
+    }
+
+    constraint ControllerHasService {
+        check : self.service.isDefined()
+        message : "Controller '" + self.name + "' must reference a Service."
+    }
+}
+
+-- WFC-14, WFC-15: RepositoryAdapter constraints
+context RepositoryAdapter {
+    constraint RepositoryAdapterHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every RepositoryAdapter must have a non-empty name."
+    }
+
+    constraint RepositoryAdapterImplementsPort {
+        check : self.implementsPort.isDefined()
+        message : "RepositoryAdapter '" + self.name + "' must implement a RepositoryPort via implementsPort."
+    }
+}
+
+-- WFC-16, WFC-17, WFC-18: Endpoint constraints
+context Endpoint {
+    constraint EndpointHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Endpoint must have a non-empty name."
+    }
+
+    constraint EndpointHasPath {
+        check : self.path.isDefined() and self.path.trim().length() > 0
+        message : "Endpoint '" + self.name + "' must have a non-empty path."
+    }
+
+    constraint EndpointHasHttpMethod {
+        check : self.httpMethod.isDefined()
+        message : "Endpoint '" + self.name + "' must have a defined httpMethod (GET, POST, PUT, or DELETE)."
+    }
+}
+
+-- WFC-19, WFC-20: Attribute constraints
+context Attribute {
+    constraint AttributeHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Attribute must have a non-empty name."
+    }
+
+    constraint AttributeHasType {
+        check : self.type.isDefined()
+        message : "Attribute '" + self.name + "' must have a defined type."
+    }
+}
+
+-- WFC-21, WFC-22: Parameter constraints
+context Parameter {
+    constraint ParameterHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Parameter must have a non-empty name."
+    }
+
+    constraint ParameterHasType {
+        check : self.type.isDefined()
+        message : "Parameter '" + self.name + "' must have a defined type."
+    }
+}
+
+-- WFC-23: Dto constraints
+context Dto {
+    constraint DtoHasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "Every Dto must have a non-empty name."
+    }
+}
+
+-- WFC-24: CollectionType must have an innerType
+context CollectionType {
+    constraint CollectionTypeHasInnerType {
+        check : self.innerType.isDefined()
+        message : "A CollectionType must have a defined innerType (cannot be a raw collection)."
+    }
+}
+
+-- WFC-25: MapType must have both key and value types
+context MapType {
+    constraint MapTypeHasKeyType {
+        check : self.keyType.isDefined()
+        message : "A MapType must have a defined keyType."
+    }
+
+    constraint MapTypeHasValueType {
+        check : self.valueType.isDefined()
+        message : "A MapType must have a defined valueType."
+    }
+}

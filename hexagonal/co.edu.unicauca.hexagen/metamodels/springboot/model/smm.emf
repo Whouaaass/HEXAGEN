@@ -1,0 +1,151 @@
+@namespace(uri="smm", prefix="smm")
+package smm;
+
+// ==========================================
+// ENUMS
+// ==========================================
+enum HttpMethod {
+  GET; POST; PUT; DELETE;
+}
+
+enum ParamKind {
+  PATH; QUERY; BODY;
+}
+
+enum PrimitiveKind {
+  STRING; INTEGER; LONG; BOOLEAN; DOUBLE; DATE; UUID;
+}
+
+enum CollectionKind {
+  LIST; SET;
+}
+
+// ==========================================
+// SISTEMA DE TIPADO EXHAUSTIVO
+// ==========================================
+abstract class Type {}
+
+class PrimitiveType extends Type {
+  attr PrimitiveKind kind;
+}
+
+class CustomType extends Type {
+  ref JavaClass reference;
+}
+
+class CollectionType extends Type {
+  attr CollectionKind collection;
+  val Type innerType;
+}
+
+class MapType extends Type {
+  val Type keyType;
+  val Type valueType;
+}
+
+// ==========================================
+// ESTRUCTURA HEXAGONAL Y APLICACIÓN
+// ==========================================
+class Application {
+  attr String name;
+  attr String basePackage;
+  attr String javaVersion;
+  attr String serverPort;
+  val BoundedContext[*] contexts;
+}
+
+class BoundedContext {
+  attr String name;
+  val DomainLayer domain;
+  val ApplicationLayer application;
+  val InfrastructureLayer infrastructure;
+}
+
+class DomainLayer {
+  val Entity[*] entities;
+  val ValueObject[*] valueObjects;
+  val RepositoryPort[*] repositoryPorts;
+}
+
+class ApplicationLayer {
+  val Service[*] services;
+}
+
+class InfrastructureLayer {
+  val Controller[*] controllers;
+  val RepositoryAdapter[*] repositoryAdapters;
+  val Dto[*] dtos;
+}
+
+// ==========================================
+// ELEMENTOS BASE DE JAVA
+// ==========================================
+abstract class NamedElement {
+  attr String name;
+}
+
+abstract class JavaClass extends NamedElement {
+  val Attribute[*] attributes;
+  val Method[*] methods;
+}
+
+// ==========================================
+// COMPONENTES DE DOMINIO
+// ==========================================
+class Entity extends JavaClass {
+  val Type idType;
+}
+
+class ValueObject extends JavaClass {}
+
+class RepositoryPort extends NamedElement {
+  ref Entity entityType;
+  val Type idType;
+  val Method[*] methods;
+}
+
+// ==========================================
+// COMPONENTES DE APLICACIÓN
+// ==========================================
+class Service extends JavaClass {
+  ref RepositoryPort[*] requiredPorts;
+}
+
+// ==========================================
+// COMPONENTES DE INFRAESTRUCTURA
+// ==========================================
+class Controller extends JavaClass {
+  attr String basePath;
+  ref Service service;
+  val Endpoint[*] endpoints;
+}
+
+class RepositoryAdapter extends JavaClass {
+  ref RepositoryPort implementsPort;
+}
+
+class Dto extends JavaClass {}
+
+// ==========================================
+// MIEMBROS DE CLASE (Atributos, Métodos)
+// ==========================================
+class Attribute extends NamedElement {
+  val Type type;
+  attr boolean isId;
+  attr boolean isNullable;
+}
+
+class Method extends NamedElement {
+  val Type returnType;
+  val Parameter[*] parameters;
+}
+
+class Endpoint extends Method {
+  attr HttpMethod httpMethod;
+  attr String path;
+}
+
+class Parameter extends NamedElement {
+  val Type type;
+  attr ParamKind kind;
+}

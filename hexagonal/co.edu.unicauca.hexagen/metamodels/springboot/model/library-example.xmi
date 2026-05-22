@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smm:Application xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:smm="smm" xsi:schemaLocation="smm smm.ecore" name="LibraryApp" basePackage="com.spring.app" javaVersion="21" serverPort="8080">
+  <contexts>
+    <domain>
+      <entities name="Book">
+        <attributes name="title">
+          <type xsi:type="smm:PrimitiveType"/>
+        </attributes>
+        <idType xsi:type="smm:PrimitiveType" kind="UUID"/>
+      </entities>
+      <entities name="Loan">
+        <attributes name="book">
+          <type xsi:type="smm:CustomType" reference="//@contexts.0/@domain/@entities.0"/>
+        </attributes>
+      </entities>
+      <repositoryPorts name="BookRepositoryPort" entityType="//@contexts.0/@domain/@entities.0">
+        <methods name="findAll">
+          <returnType xsi:type="smm:CollectionType">
+            <innerType xsi:type="smm:CustomType" reference="//@contexts.0/@domain/@entities.0"/>
+          </returnType>
+        </methods>
+      </repositoryPorts>
+    </domain>
+    <application>
+      <services name="LibraryService" requiredPorts="//@contexts.0/@domain/@repositoryPorts.0"/>
+    </application>
+    <infrastructure>
+      <controllers name="BookController" basePath="/api/books" service="//@contexts.0/@application/@services.0">
+        <endpoints name="getBooks" path="/">
+          <returnType xsi:type="smm:CollectionType">
+            <innerType xsi:type="smm:CustomType" reference="//@contexts.0/@infrastructure/@dtos.0"/>
+          </returnType>
+        </endpoints>
+      </controllers>
+      <repositoryAdapters name="JsonBookRepositoryAdapter" implementsPort="//@contexts.0/@domain/@repositoryPorts.0"/>
+      <dtos name="BookDto"/>
+    </infrastructure>
+  </contexts>
+</smm:Application>
