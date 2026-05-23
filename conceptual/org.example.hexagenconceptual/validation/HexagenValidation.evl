@@ -1,0 +1,366 @@
+/**
+ * Hexagen Conceptual Model Validation Module
+ *
+ * Valida modelos conceptuales hexagen según reglas de integridad estructural,
+ * semántica y compatibilidad
+ *
+ * Metamodelo: http://www.hexagen.org/conceptual
+ */
+
+// =============================================================================
+// CONTEXTO: NamedElement (aplica a todos los elementos del modelo)
+// =============================================================================
+
+/**
+ * R01 - Todo elemento nombrado debe tener un nombre no vacío.
+ * Crítico para la transformación: getName() retorna null si no hay nombre,
+ * lo que provoca que OutboundPorts, Adapters y Links queden sin nombre.
+ */
+context NamedElement {
+  constraint R01_NamedElementHasName {
+    check: self.name <> null and self.name.trim() <> ""
+    message: "El elemento de tipo '" + self.eClass().name +
+             "' debe tener un nombre no vacío."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: Domain
+// =============================================================================
+
+/**
+ * R02 - Un Domain debe tener al menos un SubDomain.
+ * Sin subDomains, la transformación Domain2Hexagon no genera
+ * ningún AggregateRoot, ValueObject ni BusinessService.
+ */
+context Domain {
+  constraint R02_DomainHasAtLeastOneSubDomain {
+    check: self.subDomains.size() > 0
+    message: "El Domain '" + self.name +
+             "' debe contener al menos un SubDomain."
+  }
+
+  /**
+   * R03 - Los SubDomains de un Domain deben tener nombres únicos.
+   */
+  constraint R03_SubDomainNamesUniqueWithinDomain {
+    check: self.subDomains->forAll(sd1 |
+             self.subDomains->select(sd2 | sd2.name = sd1.name)->size() = 1
+           )
+    message: "El Domain '" + self.name +
+             "' tiene SubDomains con nombres duplicados."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: SubDomain
+// =============================================================================
+
+/**
+ * R04 - Un SubDomain debe tener al menos un Concept.
+ * La transformación espera Concepts para generar AggregateRoots en el DomainCore.
+ */
+context SubDomain {
+  constraint R04_SubDomainHasAtLeastOneConcept {
+    check: self.concepts.size() > 0
+    message: "El SubDomain '" + self.name +
+             "' debe contener al menos un Concept."
+  }
+
+  /**
+   * R05 - Los Concepts de un SubDomain deben tener nombres únicos.
+   * La transformación usa el nombre del Concept para identificar AggregateRoots;
+   * duplicados causarían colisiones en selectOne().
+   */
+  constraint R05_ConceptNamesUniqueWithinSubDomain {
+    check: self.concepts->forAll(c1 |
+             self.concepts->select(c2 | c2.name = c1.name)->size() = 1
+           )
+    message: "El SubDomain '" + self.name +
+             "' tiene Concepts con nombres duplicados."
+  }
+
+  /**
+   * R06 - Los ValueObjects de un SubDomain deben tener nombres únicos.
+   */
+  constraint R06_ValueObjectNamesUniqueWithinSubDomain {
+    check: self.valueObjects->forAll(vo1 |
+             self.valueObjects->select(vo2 | vo2.name = vo1.name)->size() = 1
+           )
+    message: "El SubDomain '" + self.name +
+             "' tiene ValueObjects con nombres duplicados."
+  }
+
+  /**
+   * R07 - Los BusinessServices de un SubDomain deben tener nombres únicos.
+   * Nombres duplicados generan AdapterPortLinks y ServicePortLinks con
+   * el mismo nombre en la capa de infraestructura.
+   */
+  constraint R07_BusinessServiceNamesUniqueWithinSubDomain {
+    check: self.businessServices->forAll(s1 |
+             self.businessServices->select(s2 | s2.name = s1.name)->size() = 1
+           )
+    message: "El SubDomain '" + self.name +
+             "' tiene BusinessServices con nombres duplicados."
+  }
+
+  /**
+   * R08 - No debe haber un Concept y un ValueObject con el mismo nombre en el mismo SubDomain.
+   * La transformación usa el nombre para vincular ValueObjects a AggregateRoots
+   * comparando attr.type con el nombre del VO; un conflicto de nombres genera
+   * asignaciones incorrectas.
+   */
+  constraint R08_ConceptAndValueObjectNamesDoNotCollide {
+    check: self.concepts->forAll(c |
+             self.valueObjects->forAll(vo | vo.name <> c.name)
+           )
+    message: "El SubDomain '" + self.name +
+             "' tiene un Concept y un ValueObject con el mismo nombre. " +
+             "Esto genera colisiones en la transformación CMM2HMM."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: Concept
+// =============================================================================
+
+/**
+ * R09 - Los atributos de un Concept deben tener nombres únicos.
+ * Duplicados en AggregateRoot.values causarían ambigüedad en el modelo hexagonal.
+ */
+context Concept {
+  constraint R09_ConceptAttributeNamesUnique {
+    check: self.attributes->forAll(a1 |
+             self.attributes->select(a2 | a2.name = a1.name)->size() = 1
+           )
+    message: "El Concept '" + self.name +
+             "' tiene atributos con nombres duplicados."
+  }
+
+  /**
+   * R10 - Un Concept debe tener al menos un atributo.
+   * Un AggregateRoot sin valores es semánticamente vacío en el modelo hexagonal.
+   */
+  constraint R10_ConceptHasAtLeastOneAttribute {
+    check: self.attributes.size() > 0
+    message: "El Concept '" + self.name +
+             "' debe tener al menos un atributo."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: ValueObject
+// =============================================================================
+
+/**
+ * R11 - Los atributos de un ValueObject deben tener nombres únicos.
+ */
+context ValueObject {
+  constraint R11_ValueObjectAttributeNamesUnique {
+    check: self.attributes->forAll(a1 |
+             self.attributes->select(a2 | a2.name = a1.name)->size() = 1
+           )
+    message: "El ValueObject '" + self.name +
+             "' tiene atributos con nombres duplicados."
+  }
+
+  /**
+   * R12 - Un ValueObject debe tener al menos un atributo.
+   * Un ValueObject sin atributos no aporta semántica y generaría un
+   * Target!ValueObject vacío en el modelo hexagonal.
+   */
+  constraint R12_ValueObjectHasAtLeastOneAttribute {
+    check: self.attributes.size() > 0
+    message: "El ValueObject '" + self.name +
+             "' debe tener al menos un atributo."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: Attribute
+// =============================================================================
+
+/**
+ * R13 - Todo Attribute debe tener un tipo definido.
+ * La transformación copia attr.type directamente al Target!Attribute;
+ * un tipo vacío genera atributos sin tipo en el modelo hexagonal.
+ */
+context Attribute {
+  constraint R13_AttributeTypeDefined {
+    check: self.type <> null and self.type.trim() <> ""
+    message: "El atributo '" + self.name +
+             "' debe tener un tipo definido (e.g., String, Integer, Boolean)."
+  }
+
+  /**
+   * R14 - El campo 'required' de un Attribute debe estar especificado.
+   * El template EGL usa required para mostrar el marcador '*' u 'o';
+   * un valor null rompe la generación del diagrama PlantUML.
+   */
+  constraint R14_AttributeRequiredDefined {
+    check: self.required <> null
+    message: "El atributo '" + self.name +
+             "' debe especificar si es requerido (required = true/false)."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: Relationship
+// =============================================================================
+
+/**
+ * R15 - Toda Relationship debe tener source y target definidos.
+ * La transformación accede a rel.source y rel.target para construir
+ * OutboundPort y OutboundAdapter; valores null causarían NullPointerException.
+ */
+context Relationship {
+  constraint R15_RelationshipHasSourceAndTarget {
+    check: self.source <> null and self.target <> null
+    message: "La Relationship '" + self.name +
+             "' debe tener source y target definidos."
+  }
+
+  /**
+   * R16 - El tipo de una Relationship debe ser uno de los valores válidos.
+   * El template EGL y la transformación ETL usan el tipo para determinar
+   * el tipo de flecha PlantUML y el tipo de referencia en el AggregateRoot.
+   * Valores no reconocidos producen relaciones genéricas '--'.
+   */
+  constraint R16_RelationshipTypeIsValid {
+    check: self.type <> null and
+           Set{"composition", "aggregation", "association", "inheritance"}
+             ->includes(self.type.toLowerCase())
+    message: "La Relationship '" + self.name +
+             "' tiene un tipo inválido: '" + self.type +
+             "'. Valores válidos: composition, aggregation, association, inheritance."
+  }
+
+  /**
+   * R17 - Una Relationship no debe apuntar a sí misma (self-loop).
+   * Una relación reflexiva generaría un OutboundPort con nombre repetido
+   * y una referencia circular en el AggregateRoot.
+   */
+  constraint R17_RelationshipNotSelfLoop {
+    check: self.source <> self.target
+    message: "La Relationship '" + self.name +
+             "' no puede tener el mismo Concept como source y target (self-loop)."
+  }
+
+  /**
+   * R18 - No deben existir dos Relationships con el mismo source, target y tipo
+   * dentro del mismo SubDomain.
+   * Duplicados generan OutboundPorts y Adapters con el mismo nombre,
+   * causando colisiones en el modelo hexagonal.
+   */
+  constraint R18_RelationshipNotDuplicatedInSubDomain {
+    guard: self.source <> null and self.target <> null and self.type <> null
+    check: self.eContainer().relationships->select(r |
+             r <> self and
+             r.source = self.source and
+             r.target = self.target and
+             r.type = self.type
+           )->size() = 0
+    message: "Existe una Relationship duplicada en el SubDomain con source='" +
+             self.source.name + "', target='" + self.target.name +
+             "', type='" + self.type + "'."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: BusinessOperation
+// =============================================================================
+
+/**
+ * R19 - Toda BusinessOperation debe tener un returnType definido.
+ * La transformación crea un Target!Attribute con outAttr.type = op.returnType;
+ * un valor vacío produce un atributo de salida sin tipo en el UseCase.
+ */
+context BusinessOperation {
+  constraint R19_BusinessOperationReturnTypeDefined {
+    check: self.returnType <> null and self.returnType.trim() <> ""
+    message: "La BusinessOperation '" + self.name +
+             "' debe tener un returnType definido (e.g., void, String, OrderDTO)."
+  }
+
+  /**
+   * R20 - Los parámetros de una BusinessOperation deben tener nombres únicos.
+   * Duplicados en UseCase.input generarían ambigüedad en el modelo hexagonal.
+   */
+  constraint R20_OperationParameterNamesUnique {
+    check: self.parameters->forAll(p1 |
+             self.parameters->select(p2 | p2.name = p1.name)->size() = 1
+           )
+    message: "La BusinessOperation '" + self.name +
+             "' tiene parámetros con nombres duplicados."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: Parameter
+// =============================================================================
+
+/**
+ * R21 - Todo Parameter debe tener un tipo definido.
+ * La transformación asigna inputAttr.type = param.type directamente;
+ * un tipo vacío produce parámetros sin tipo en el UseCase.input.
+ */
+context Parameter {
+  constraint R21_ParameterTypeDefined {
+    check: self.type <> null and self.type.trim() <> ""
+    message: "El parámetro '" + self.name +
+             "' debe tener un tipo definido (e.g., String, Long, OrderId)."
+  }
+
+  /**
+   * R22 - El campo 'required' de un Parameter debe estar especificado.
+   */
+  constraint R22_ParameterRequiredDefined {
+    check: self.required <> null
+    message: "El parámetro '" + self.name +
+             "' debe especificar si es requerido (required = true/false)."
+  }
+}
+
+// =============================================================================
+// CONTEXTO: BusinessService
+// =============================================================================
+
+/**
+ * R23 - Un BusinessService debe tener al menos una BusinessOperation.
+ * Un servicio sin operaciones genera un ApplicationService vacío
+ * y un InboundPort sin UseCases asociados.
+ */
+context BusinessService {
+  constraint R23_BusinessServiceHasAtLeastOneOperation {
+    check: self.operations.size() > 0
+    message: "El BusinessService '" + self.name +
+             "' debe tener al menos una BusinessOperation."
+  }
+
+  /**
+   * R24 - Las operaciones de un BusinessService deben tener nombres únicos.
+   * Duplicados generan UseCases con el mismo nombre en el ApplicationService.
+   */
+  constraint R24_BusinessServiceOperationNamesUnique {
+    check: self.operations->forAll(op1 |
+             self.operations->select(op2 | op2.name = op1.name)->size() = 1
+           )
+    message: "El BusinessService '" + self.name +
+             "' tiene operaciones con nombres duplicados."
+  }
+
+  /**
+   * R25 - Los Concepts referenciados por un BusinessService deben existir
+   * dentro del mismo SubDomain que contiene el servicio.
+   * La transformación usa service.concepts para crear ServiceAggregateLinks;
+   * si el Concept no existe en el SubDomain, selectOne() retorna null
+   * y el link no se crea, rompiendo la trazabilidad.
+   */
+  constraint R25_BusinessServiceConceptsExistInSubDomain {
+    guard: self.eContainer() <> null
+    check: self.concepts->forAll(c | self.eContainer().concepts->includes(c))
+    message: "El BusinessService '" + self.name +
+             "' referencia Concepts que no pertenecen a su SubDomain. " +
+             "Todos los Concepts referenciados deben estar definidos en el mismo SubDomain."
+  }
+}

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<conceptual:Domain
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:conceptual="http://www.hexagen.org/conceptual"
+    name="LibraryDomain">
+
+  <subDomains name="CatalogSubDomain">
+
+    <!-- Concept con atributos únicos y tipos definidos (R09, R10, R13, R14) -->
+    <concepts name="Book">
+      <attributes name="title"  type="String"  required="true"/>
+      <attributes name="isbn"   type="String"  required="true"/>
+      <attributes name="pages"  type="Integer" required="false"/>
+    </concepts>
+
+    <concepts name="Author">
+      <attributes name="fullName" type="String"  required="true"/>
+      <attributes name="email"    type="String"  required="false"/>
+    </concepts>
+
+    <!-- ValueObject con atributos únicos (R11, R12, R13, R14) -->
+    <valueObjects name="Address">
+      <attributes name="street" type="String" required="true"/>
+      <attributes name="city"   type="String" required="true"/>
+    </valueObjects>
+
+    <!-- Relationship válida: source, target, tipo válido, no self-loop (R15, R16, R17, R18) -->
+    <relationships name="BookAuthorRel"
+        source="//@subDomains.0/@concepts.0"
+        target="//@subDomains.0/@concepts.1"
+        type="association"/>
+
+    <!-- BusinessService con operaciones únicas y Concepts del mismo SubDomain (R23, R24, R25) -->
+    <businessServices name="CatalogService"
+        concepts="//@subDomains.0/@concepts.0 //@subDomains.0/@concepts.1">
+
+      <!-- BusinessOperation con returnType y parámetros únicos (R19, R20) -->
+      <operations name="findBookByIsbn" returnType="Book">
+        <parameters name="isbn" type="String" required="true"/>  <!-- R21, R22 -->
+      </operations>
+
+      <operations name="registerBook" returnType="void">
+        <parameters name="title"  type="String"  required="true"/>
+        <parameters name="isbn"   type="String"  required="true"/>
+        <parameters name="author" type="String"  required="false"/>
+      </operations>
+
+    </businessServices>
+
+  </subDomains>
+
+</conceptual:Domain>

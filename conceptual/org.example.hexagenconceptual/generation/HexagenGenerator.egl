@@ -1,0 +1,96 @@
+[%
+var domain = conceptual!Domain.all.first();
+if (domain.isUndefined()) {
+  "Error: No Domain instance found".errln();
+  return;
+}
+%]
+@startuml [%= domain.name %]
+
+title [%= domain.name %] - Domain Model
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+[% for (sub in domain.subDomains) { %]
+package "[%= sub.name %]" {
+[%   if (sub.concepts.isDefined()) {
+       for (c in sub.concepts) { %]
+  class "[%= c.name %]" as [%= sub.name %]_[%= c.name %] {
+[%     if (c.attributes.isDefined()) {
+         for (attr in c.attributes) { %]
+    [%= attr.type %] [%= attr.name %]
+[%     }
+       } %]
+  }
+[%   }
+     } %]
+
+[%   if (sub.valueObjects.isDefined()) {
+       for (vo in sub.valueObjects) { %]
+  class "[%= vo.name %] (VO)" as [%= sub.name %]_[%= vo.name %] {
+[%     if (vo.attributes.isDefined()) {
+         for (attr in vo.attributes) { %]
+    [%= attr.type %] [%= attr.name %]
+[%     }
+       } %]
+  }
+[%   }
+     } %]
+
+[%   if (sub.businessServices.isDefined()) {
+       for (svc in sub.businessServices) { %]
+  interface "[%= svc.name %]" as [%= sub.name %]_[%= svc.name %] {
+[%     if (svc.operations.isDefined()) {
+         for (op in svc.operations) {
+           var params = "";
+           if (op.parameters.isDefined()) {
+             for (p in op.parameters) {
+               if (params <> "") { params = params + ", "; }
+               params = params + p.type + " " + p.name;
+             }
+           }
+%]
+    [%= "    {method} " + op.returnType + " " + op.name + "(" + params + ")" %]
+[%     }
+       } %]
+  }
+[%   }
+     } %]
+}
+[% } %]
+
+' ========================================
+' RELATIONSHIPS
+' ========================================
+[%
+var allSubs = domain.subDomains;
+if (allSubs.isDefined() and allSubs.size() > 0) {
+  for (sub in allSubs) {
+    var rels = sub.relationships;
+    if (rels.isDefined() and rels.size() > 0) {
+      for (rel in rels) {
+        if (rel.source.isDefined() and rel.target.isDefined()) {
+          var srcConcept = rel.source;
+          var tgtConcept = rel.target;
+          var srcSub = srcConcept.eContainer();
+          var tgtSub = tgtConcept.eContainer();
+          if (srcSub.isDefined() and tgtSub.isDefined()) {
+            var srcAlias = srcSub.name + "_" + srcConcept.name;
+            var tgtAlias = tgtSub.name + "_" + tgtConcept.name;
+%]
+[%           if (rel.type = "composition") { %]
+[%= srcAlias %] *-- [%= tgtAlias %] : [%= rel.name %]
+[%           } else if (rel.type = "aggregation") { %]
+[%= srcAlias %] o-- [%= tgtAlias %] : [%= rel.name %]
+[%           } else if (rel.type = "inheritance") { %]
+[%= srcAlias %] <|-- [%= tgtAlias %] : [%= rel.name %]
+[%           } else { %]
+[%= srcAlias %] --> [%= tgtAlias %] : [%= rel.name %]
+[%           } %]
+[%         }
+       }
+     }
+   }
+ }
+}
+%]

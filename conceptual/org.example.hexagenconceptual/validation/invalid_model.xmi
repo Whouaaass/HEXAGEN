@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MODELO INVÁLIDO — Cada elemento viola una restricción específica.
+  Restricciones esperadas a fallar:
+    R01 - SubDomain sin nombre
+    R02 - Domain sin SubDomains         (no aplica aquí, hay subDomains)
+    R05 - Concepts con nombre duplicado
+    R08 - Concept y ValueObject con mismo nombre
+    R09 - Atributos duplicados en Concept
+    R13 - Atributo sin tipo
+    R14 - Atributo sin required
+    R15 - Relationship sin source/target
+    R16 - Relationship con tipo inválido
+    R17 - Relationship self-loop
+    R19 - BusinessOperation sin returnType
+    R21 - Parameter sin tipo
+    R23 - BusinessService sin operaciones
+    R25 - BusinessService referencia Concept de otro SubDomain
+-->
+<conceptual:Domain
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:conceptual="http://www.hexagen.org/conceptual"
+    name="BrokenDomain">
+
+  <!-- R01: SubDomain sin nombre -->
+  <subDomains name="">
+
+    <!-- R05: Dos Concepts con el mismo nombre -->
+    <concepts name="Order">
+      <!-- R09: Atributos con nombre duplicado -->
+      <attributes name="id"   type="String"  required="true"/>
+      <attributes name="id"   type="String"  required="true"/>
+      <!-- R13: Atributo sin tipo -->
+      <attributes name="total" type=""        required="true"/>
+      <!-- R14: Atributo sin required -->
+      <attributes name="date"  type="String"/>
+    </concepts>
+
+    <concepts name="Order"/>  <!-- R05: duplicado -->
+
+    <!-- R08: ValueObject con mismo nombre que un Concept -->
+    <valueObjects name="Order">
+      <attributes name="street" type="String" required="true"/>
+    </valueObjects>
+
+    <!-- R15: Relationship sin source ni target -->
+    <relationships name="RelSinTarget"
+        type="association"/>
+
+    <!-- R16: Tipo de relación inválido -->
+    <relationships name="RelTipoMalo"
+        source="//@subDomains.0/@concepts.0"
+        target="//@subDomains.0/@concepts.1"
+        type="owns"/>
+
+    <!-- R17: Self-loop -->
+    <relationships name="RelSelfLoop"
+        source="//@subDomains.0/@concepts.0"
+        target="//@subDomains.0/@concepts.0"
+        type="composition"/>
+
+    <!-- R23: BusinessService sin operaciones -->
+    <businessServices name="EmptyService"/>
+
+    <!-- R19 y R21: operación sin returnType, parámetro sin tipo -->
+    <businessServices name="BrokenService">
+      <operations name="doSomething" returnType="">
+        <parameters name="input" type="" required="true"/>  <!-- R21 -->
+      </operations>
+    </businessServices>
+
+  </subDomains>
+
+  <!-- Segundo SubDomain para probar R25 -->
+  <subDomains name="OtherSubDomain">
+    <concepts name="Customer">
+      <attributes name="name" type="String" required="true"/>
+    </concepts>
+
+    <!-- R25: referencia un Concept del SubDomain anterior, no de este -->
+    <businessServices name="CrossService"
+        concepts="//@subDomains.0/@concepts.0">
+      <operations name="serve" returnType="void"/>
+    </businessServices>
+  </subDomains>
+
+</conceptual:Domain>

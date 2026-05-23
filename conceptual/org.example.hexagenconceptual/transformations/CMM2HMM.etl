@@ -1,124 +1,261 @@
-rule ConceptualModel2Hexagon
-transform cm : Source!ConceptualModel
-to hex : Target!Hexagon {
-    hex.name = cm.name;
-    
-    var core = new Target!DomainCore;
-    hex.core = core;
-    
-    for (entity in cm.entities) {
-        var agg = new Target!AggregateRoot;
-        agg.name = entity.name;
-        
-        for (attr in entity.attributes) {
-            var ha = new Target!Attribute;
-            ha.name = attr.name;
-            ha.type = attr.type;
-            if (attr.required = null) {
-                ha.required = true;
-            } else {
-                ha.required = attr.required;
-            }
-            agg.attributes.add(ha);
-        }
-        
-        for (rel in entity.relationships) {
-            var assoc = new Target!Association;
-            assoc.name = rel.name;
-            assoc.source = agg;
-            assoc.target = null;
-            assoc.multiplicity = getMultiplicity(rel.type);
-            assoc.isNavigable = true;
-            agg.associations.add(assoc);
-        }
-        
-        core.aggregates.add(agg);
+@model Source "platform:/resource/HEXAGEN/conceptual/org.example.hexagenconceptual/models/complex_conceptual.xmi" read
+@model Target "platform:/resource/HEXAGEN/hexagonal/co.edu.unicauca.hexagen/models/LibraryV3.xmi" write
+// =============================================================================
+// PRE-TRANSFORMATION: Debugging
+// =============================================================================
+pre {
+    "========================================".println();
+    "INICIANDO TRANSFORMACION".println();
+    "========================================".println();
+    "Source model loaded: " + Source.allInstances().size().println();
+    "Target model ready: true".println();
+    "========================================".println();
+}
+// =============================================================================
+// OPERACIÓN AUXILIAR: Obtener nombre de forma segura
+// =============================================================================
+operation getName(obj : Any) : String {
+    var feature = obj.eClass().getEStructuralFeature('name');
+    if (feature <> null and obj.eIsSet(feature)) {
+        return obj.eGet(feature);
     }
-    
-    for (vo in cm.valueObjects) {
-        var hvo = new Target!ValueObject;
-        hvo.name = vo.name;
-        
-        for (attr in vo.attributes) {
-            var ha = new Target!Attribute;
-            ha.name = attr.name;
-            ha.type = attr.type;
-            if (attr.required = null) {
-                ha.required = true;
-            } else {
-                ha.required = attr.required;
-            }
-            hvo.attributes.add(ha);
-        }
-        
-        if (not core.aggregates.isEmpty()) {
-            core.aggregates.first().internalEntities.add(hvo);
-        }
-    }
-    
-    for (rel in cm.relationships) {
-        var port = new Target!OutboundPort;
-        port.name = rel.source.name + rel.target.name + 'Port';
-        
-        var infraOp = new Target!InfrastructureOperation;
-        infraOp.name = 'find' + rel.target.name;
-        infraOp.returnType = rel.target.name;
-        infraOp.operationType = 'QUERY';
-        port.operations.add(infraOp);
-        
-        hex.ports.add(port);
-        
-        var adapter = new Target!OutboundAdapter;
-        adapter.name = rel.source.name + rel.target.name + 'Adapter';
-        adapter.targetPort = port;
-        adapter.technology = 'JPA';
-        hex.adapters.add(adapter);
-    }
-    
-    for (svc in cm.services) {
-        var appSvc = new Target!ApplicationService;
-        appSvc.name = svc.name;
-        
-        for (op in svc.operations) {
-            var useCase = new Target!UseCase;
-            useCase.name = op.name;
-            useCase.returnType = op.returnType;
-            
-            for (param in op.parameters) {
-                var inputAttr = new Target!Attribute;
-                inputAttr.name = param.name;
-                inputAttr.type = param.type;
-                if (param.required = null) {
-                    inputAttr.required = true;
-                } else {
-                    inputAttr.required = param.required;
-                }
-                useCase.input.add(inputAttr);
-            }
-            
-            appSvc.useCases.add(useCase);
-        }
-        
-        hex.services.add(appSvc);
-    }
+    return null;
 }
 
-operation getMultiplicity(relType : String) : String {
-    if (relType = 'OneToOne') {
-        return '1';
-    } else {
-        if (relType = 'OneToMany') {
-            return '0..*';
-        } else {
-            if (relType = 'ManyToOne') {
-                return '0..1';
-            } else {
-                if (relType = 'ManyToMany') {
-                    return '0..*';
-                } else {
-                    return '0..1';
+// =============================================================================
+// REGLA PRINCIPAL: Domain → Hexagon
+// =============================================================================
+rule Domain2Hexagon
+    transform cm : Source!Domain to hex : Target!Hexagon {
+        
+    "→ Procesando Domain: " + cm.name.println();
+    "  SubDomains encontrados: " + cm.subDomains.size().println();
+    
+    hex.name = cm.name;
+
+        // Crear las 3 capas obligatorias del hexágono
+        var infra = new Target!InfrastructureLayer;
+        infra.name = "Infrastructure";
+        hex.infrastructure = infra;
+
+        var app = new Target!ApplicationLayer;
+        app.name = "Application";
+        hex.application = app;
+
+        var core = new Target!DomainCore;
+        core.name = "DomainCore";
+        hex.domain = core;
+
+        // FASE 1: Transformar Concepts → AggregateRoots
+        for (subDomain in cm.subDomains) {
+            for (concept in subDomain.concepts) {
+                var agg = concept.equivalent();
+                core.aggregates.add(agg);
+            }
+        }
+
+        // FASE 2: Transformar ValueObjects
+        for (subDomain in cm.subDomains) {
+            for (vo in subDomain.valueObjects) {
+                var hvo = vo.equivalent();
+                
+                var ownerAgg = null;
+                for (a in core.aggregates) {
+                    var aggName = getName(a);
+                    if (aggName <> null) {
+                        for (sd in cm.subDomains) {
+                            for (c in sd.concepts) {
+                                var cName = getName(c);
+                                if (cName = aggName) {
+                                    for (attr in c.attributes) {
+                                        if (attr.type = getName(vo) or getName(attr) = getName(vo)) {
+                                            ownerAgg = a;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (ownerAgg <> null) break;
+                            }
+                            if (ownerAgg <> null) break;
+                        }
+                    }
+                    if (ownerAgg <> null) break;
+                }
+                
+                if (ownerAgg == null and not core.aggregates.isEmpty()) {
+                    ownerAgg = core.aggregates.first();
+                }
+                
+                if (ownerAgg <> null) {
+                    ownerAgg.attributes.add(hvo);
+                }
+            }
+        }
+
+        // FASE 3: Relationships → OutboundPorts + OutboundAdapters + Links
+        for (subDomain in cm.subDomains) {
+            for (rel in subDomain.relationships) {
+                var sourceName = getName(rel.source);
+                var targetName = getName(rel.target);
+                if (sourceName <> null and targetName <> null) {
+                    
+                    var outPort = new Target!OutboundPort;
+                    outPort.name = sourceName + targetName + "Repository";
+                    infra.ports.add(outPort);
+
+                    var outAdapter = new Target!OutboundAdapter;
+                    outAdapter.name = sourceName + targetName + "Adapter";
+                    infra.adapters.add(outAdapter);
+
+                    var link = new Target!AdapterPortLink;
+                    link.name = sourceName + targetName + "Link";
+                    link.source = outAdapter;
+                    link.target = outPort;
+                    hex.links.add(link);
+                }
+            }
+        }
+
+        // FASE 4: BusinessServices → ApplicationServices + InboundPorts/Adapters + Links
+        for (subDomain in cm.subDomains) {
+            for (svc in subDomain.businessServices) {
+                var appSvc = svc.equivalent();
+                var svcName = getName(svc);
+                
+                if (svcName <> null) {
+                    app.services.add(appSvc);
+
+                    var inPort = new Target!InboundPort;
+                    inPort.name = svcName + "Port";
+                    infra.ports.add(inPort);
+
+                    var inAdapter = new Target!InboundAdapter;
+                    inAdapter.name = svcName + "RestAdapter";
+                    infra.adapters.add(inAdapter);
+
+                    var inLink = new Target!AdapterPortLink;
+                    inLink.name = svcName + "AdapterPortLink";
+                    inLink.source = inAdapter;
+                    inLink.target = inPort;
+                    hex.links.add(inLink);
+
+                    var svcPortLink = new Target!ServicePortLink;
+                    svcPortLink.name = svcName + "ExposedLink";
+                    svcPortLink.source = appSvc;
+                    svcPortLink.target = inPort;
+                    hex.links.add(svcPortLink);
+                }
+
+                for (refConcept in svc.concepts) {
+                    var refName = getName(refConcept);
+                    if (refName <> null) {
+                        var relatedAgg = core.aggregates.selectOne(a | getName(a) = refName);
+                        if (relatedAgg <> null) {
+                            var aggLink = new Target!ServiceAggregateLink;
+                            aggLink.name = svcName + "Coordinates" + refName;
+                            aggLink.source = appSvc;
+                            aggLink.target = relatedAgg;
+                            hex.links.add(aggLink);
+                        }
+                    }
+                }
+
+                for (port in infra.ports.select(p | p.isKindOf(Target!OutboundPort))) {
+                    if (svc.concepts.exists(c | port.name.contains(getName(c)))) {
+                        var callLink = new Target!ServicePortLink;
+                        callLink.name = svcName + "Calls" + port.name;
+                        callLink.source = appSvc;
+                        callLink.target = port;
+                        hex.links.add(callLink);
+                    }
                 }
             }
         }
     }
+
+rule Concept2AggregateRoot
+    transform concept : Source!Concept to agg : Target!AggregateRoot {
+        
+        agg.name = getName(concept);
+
+        for (attr in concept.attributes) {
+            var ha = new Target!Attribute;
+            ha.name = getName(attr);
+            ha.type = attr.type;
+            agg.values.add(ha);
+        }
+
+        var container = concept.eContainer();
+        if (container <> null) {
+            var subDomainContainer = container.eContainer();
+            if (subDomainContainer <> null and subDomainContainer.eClass().name = 'SubDomain') {
+                for (rel in subDomainContainer.relationships) {
+                    if (rel.source = concept and rel.type = "composition") {
+                        var targetName = getName(rel.target);
+                        if (targetName <> null) {
+                            var refEntity = new Target!Entity;
+                            refEntity.name = targetName + "Ref";
+
+                            var idAttr = new Target!Attribute;
+                            idAttr.name = targetName.toFirstLower() + "Id";
+                            idAttr.type = "String";
+                            refEntity.values.add(idAttr);
+
+                            agg.internalEntities.add(refEntity);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+rule ValueObject2ValueObject
+    transform vo : Source!ValueObject to hvo : Target!ValueObject {
+        
+        hvo.name = getName(vo);
+
+        for (attr in vo.attributes) {
+            var ha = new Target!Attribute;
+            ha.name = getName(attr);
+            ha.type = attr.type;
+            hvo.values.add(ha);
+        }
+    }
+
+rule BusinessService2ApplicationService
+    transform svc : Source!BusinessService to appSvc : Target!ApplicationService {
+        
+        appSvc.name = getName(svc);
+
+        for (op in svc.operations) {
+            var useCase = new Target!UseCase;
+            useCase.name = getName(op);
+
+            if (op.returnType <> null and not op.returnType.trim().isEmpty()) {
+                var outAttr = new Target!Attribute;
+                outAttr.name = "result";
+                outAttr.type = op.returnType;
+                useCase.output.add(outAttr);
+            }
+
+            for (param in op.parameters) {
+                var inputAttr = new Target!Attribute;
+                inputAttr.name = getName(param);
+                inputAttr.type = param.type;
+                useCase.input.add(inputAttr);
+            }
+
+            appSvc.useCases.add(useCase);
+        }
+    }
+
+operation toFirstLower(str : String) : String {
+    if (str == null or str.isEmpty()) { 
+        return str; 
+    }
+    return str.substring(0,1).toLowerCase() + str.substring(1);
+}
+post {
+    "TRANSFORMACION FINALIZADA CORRECTAMENTE".println();
+    "Modelo destino guardado en: LibraryV3.xmi".println();
 }

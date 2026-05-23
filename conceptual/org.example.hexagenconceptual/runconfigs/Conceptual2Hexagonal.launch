@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.epsilon.etl.launchConfiguration.type">
+    <booleanAttribute key="cacheModelReads" value="true"/>
+    <booleanAttribute key="cacheModelWrites" value="true"/>
+    <booleanAttribute key="debugMode" value="false"/>
+    <booleanAttribute key="storeOnDisposal" value="true"/>
+    <booleanAttribute key="storeModelOnDisposal" value="true"/>
+    <listAttribute key="models">
+        <listEntry value="Source&#10;models/complex_conceptual.xmi&#10;http://www.hexagen.org/conceptual&#10;true&#10;false"/>
+        <listEntry value="Target&#10;../co.edu.unicauca.hexagen/models/LibraryV3.xmi&#10;http://co.edu.unicauca.hexagen.hexagonal&#10;false&#10;true"/>
+    </listAttribute>
+    <listAttribute key="metamodels">
+        <listEntry value="models/hexagenModel.ecore"/>
+        <listEntry value="../co.edu.unicauca.hexagen/metamodels/v2/hexagonalpro.ecore"/>
+    </listAttribute>
+    <stringAttribute key="etl.file" value="transformations/CMM2HMM.etl"/>
+    <booleanAttribute key="generateModelInfo" value="true"/>
+    <stringAttribute key="targetModel" value="Target"/>
+</launchConfiguration>

@@ -1,0 +1,119 @@
+@startuml LibrarySystem
+
+title LibrarySystem - Domain Model
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "CatalogManagement" {
+  class "Book" as CatalogManagement_Book {
+    String isbn
+    String title
+    String author
+    Integer publicationYear
+    BookStatus status
+    Integer totalCopies
+    Integer availableCopies
+  }
+  class "Author" as CatalogManagement_Author {
+    String authorId
+    String fullName
+    LocalDate birthDate
+    String nationality
+  }
+  class "Category" as CatalogManagement_Category {
+    String categoryId
+    String name
+    String description
+  }
+
+  class "BookIdentifier (VO)" as CatalogManagement_BookIdentifier {
+    String isbn
+    String edition
+  }
+  class "SearchCriteria (VO)" as CatalogManagement_SearchCriteria {
+    String keyword
+    String category
+    String yearRange
+  }
+
+  interface "CatalogService" as CatalogManagement_CatalogService {
+        {method} List<Book> searchBooks(SearchCriteria criteria)
+        {method} Book addBook(String isbn, String title, String authorId)
+        {method} Boolean updateBook(String isbn, Map<String,Object> updates)
+        {method} Boolean removeBook(String isbn)
+  }
+}
+package "LoanManagement" {
+  class "User" as LoanManagement_User {
+    String userId
+    String name
+    String email
+    LocalDate membershipDate
+    UserStatus status
+    Integer borrowedCount
+  }
+  class "Loan" as LoanManagement_Loan {
+    String loanId
+    LocalDate loanDate
+    LocalDate dueDate
+    LocalDate returnDate
+    BigDecimal fineAmount
+  }
+  class "Reservation" as LoanManagement_Reservation {
+    String reservationId
+    LocalDate reservationDate
+    LocalDate expiryDate
+    ReservationStatus status
+  }
+
+  class "Money (VO)" as LoanManagement_Money {
+    BigDecimal amount
+    String currency
+  }
+  class "Notification (VO)" as LoanManagement_Notification {
+    NotificationChannel channel
+    String recipient
+    String message
+  }
+
+  interface "LoanService" as LoanManagement_LoanService {
+        {method} Loan borrowBook(String userId, String isbn)
+        {method} Money returnBook(String loanId)
+        {method} Boolean renewLoan(String loanId, Integer extensionDays)
+        {method} List<Loan> checkOverdue(LocalDate referenceDate)
+  }
+  interface "UserService" as LoanManagement_UserService {
+        {method} User registerUser(String name, String email)
+        {method} Boolean updateUser(String userId, Map<String,Object> updates)
+        {method} Boolean suspendUser(String userId, String reason)
+  }
+  interface "ReservationService" as LoanManagement_ReservationService {
+        {method} Reservation createReservation(String userId, String isbn)
+        {method} Boolean cancelReservation(String reservationId)
+        {method} Boolean notifyAvailability(String reservationId, Notification notification)
+  }
+}
+package "FineManagement" {
+  class "Fine" as FineManagement_Fine {
+    String fineId
+    BigDecimal amount
+    LocalDate issueDate
+    LocalDate paidDate
+    FineStatus status
+  }
+
+  class "FineCalculation (VO)" as FineManagement_FineCalculation {
+    Integer daysOverdue
+    BigDecimal dailyRate
+    BigDecimal total
+  }
+
+  interface "FineService" as FineManagement_FineService {
+        {method} FineCalculation calculateFine(LocalDate dueDate, LocalDate returnDate)
+        {method} Fine issueFine(String loanId, BigDecimal amount)
+  }
+}
+
+' ========================================
+' RELATIONSHIPS
+' ========================================

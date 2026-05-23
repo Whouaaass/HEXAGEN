@@ -1,0 +1,63 @@
+@namespace(
+  uri="http://www.hexagen.org/conceptual",
+  prefix="conceptual"
+)
+package hexagen;
+
+abstract class NamedElement {
+  attr String name;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/domain.png")
+class Domain extends NamedElement {
+  val SubDomain[*] subDomains;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/subDomain.png")
+class SubDomain extends NamedElement {
+  val Concept[*] concepts;
+  val ValueObject[*] valueObjects;
+  val Relationship[*] relationships;
+  val BusinessService[*] businessServices;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/entity.png")
+class Concept extends NamedElement {
+  val Attribute[*] attributes;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/valueobject.png")
+class ValueObject extends NamedElement {
+  val Attribute[*] attributes;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/attribute.png")
+class Attribute extends NamedElement {
+  attr String type;
+  attr Boolean required;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/relationship.png")
+class Relationship extends NamedElement {
+  ref Concept source;
+  ref Concept target;
+  attr String type;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/parameter.png")
+class Parameter extends NamedElement {
+  attr String type;
+  attr Boolean required;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/operation.png")
+class BusinessOperation extends NamedElement {
+  attr String returnType;
+  val Parameter[*] parameters;
+}
+
+@exeed(classIcon="platform:/resource/org.example.hexagenconceptual/icons/service.png")
+class BusinessService extends NamedElement {
+  val BusinessOperation[*] operations;
+  ref Concept[*] concepts;
+}

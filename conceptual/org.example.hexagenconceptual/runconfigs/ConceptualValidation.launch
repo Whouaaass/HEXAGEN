@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.epsilon.evl.eclipse.launch.EpsilonEvlLaunchConfigurationDelegate">
+    <booleanAttribute key="cacheModelReads" value="true"/>
+    <booleanAttribute key="cacheModelWrites" value="false"/>
+    <booleanAttribute key="debugMode" value="false"/>
+    <listAttribute key="models">
+        <listEntry value="Source&#10;models/complex_conceptual.xmi&#10;http://www.hexagen.org/conceptual&#10;true&#10;false"/>
+    </listAttribute>
+    <listAttribute key="metamodels">
+        <listEntry value="models/hexagenModel.ecore"/>
+    </listAttribute>
+    <stringAttribute key="evl.file" value="validation/HexagenValidation.evl"/>
+    <booleanAttribute key="generateModelInfo" value="false"/>
+</launchConfiguration>
