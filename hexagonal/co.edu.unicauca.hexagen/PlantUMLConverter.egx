@@ -1,0 +1,7 @@
+rule Hexagonal2PlantUML
+	transform hx : Hexagon!Hexagon {
+		template : "templates/toPlantUML.egl"
+		target : "generated/plantUMLDiagram.puml"
+		parameters : Map {"hexagon" = hx}
+//		formatter: new Native("org.eclipse.epsilon.egl.formatter.language.XmlFormatter")
+	}

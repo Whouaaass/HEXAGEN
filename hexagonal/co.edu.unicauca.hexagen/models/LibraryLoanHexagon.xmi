@@ -1,195 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<p:Hexagon name="LibraryLoanHexagon"
-  xmlns:p="http://co.edu.unicauca.hexagen.hexagonal"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal  ../metamodels/v4/hexagonalpro.ecore">
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- INFRASTRUCTURE LAYER                        -->
-  <!-- ═══════════════════════════════════════════ -->
+<p:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal ../metamodels/v4/hexagonalpro.ecore" name="LibraryLoanHexagon">
   <infrastructure name="Infrastructure">
-
-    <!-- Inbound Ports -->
     <ports xsi:type="p:InboundPort" name="LoanRequestPort"/>
     <ports xsi:type="p:InboundPort" name="BookQueryPort"/>
     <ports xsi:type="p:InboundPort" name="ReturnBookPort"/>
-
-    <!-- Outbound Ports -->
     <ports xsi:type="p:OutboundPort" name="LoanRepositoryPort"/>
     <ports xsi:type="p:OutboundPort" name="BookRepositoryPort"/>
     <ports xsi:type="p:OutboundPort" name="NotificationPort"/>
-
-    <!-- Inbound Adapters -->
     <adapters xsi:type="p:InboundAdapter" name="LoanRestController"/>
     <adapters xsi:type="p:InboundAdapter" name="BookRestController"/>
-
-    <!-- Outbound Adapters -->
     <adapters xsi:type="p:OutboundAdapter" name="LoanORMRepository"/>
     <adapters xsi:type="p:OutboundAdapter" name="BookORMRepository"/>
     <adapters xsi:type="p:OutboundAdapter" name="EmailNotificationAdapter"/>
-
   </infrastructure>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- APPLICATION LAYER                           -->
-  <!-- ═══════════════════════════════════════════ -->
   <application name="Application">
-
     <services name="LoanService">
-
       <useCases name="RequestLoan">
-        <input  name="bookId"   type="UUID"/>
-        <input  name="memberId" type="UUID"/>
-        <output name="loanId"   type="UUID"/>
-        <output name="dueDate"  type="DateTime"/>
+        <input name="bookId" type="UUID"/>
+        <input name="memberId" type="UUID"/>
+        <output name="loanId" type="UUID"/>
+        <output name="dueDate" type="DateTime"/>
       </useCases>
-
       <useCases name="ReturnBook">
-        <input  name="loanId"    type="UUID"/>
-        <output name="status"    type="LoanStatus"/>
-        <output name="fine"      type="Decimal"/>
+        <input name="loanId" type="UUID"/>
+        <output name="status" type="LoanStatus"/>
+        <output name="fine" type="Decimal"/>
       </useCases>
-
       <useCases name="RenewLoan">
-        <input  name="loanId"    type="UUID"/>
+        <input name="loanId" type="UUID"/>
         <output name="newDueDate" type="DateTime"/>
       </useCases>
-
       <useCases name="GetLoanHistory">
-        <input  name="memberId" type="UUID"/>
-        <output name="loans"    type="LoanList"/>
+        <input name="memberId" type="UUID"/>
+        <output name="loans" type="LoanList"/>
       </useCases>
-
     </services>
-
     <services name="BookService">
-
       <useCases name="SearchBook">
-        <input  name="title"    type="String"/>
-        <input  name="author"   type="String"/>
-        <output name="books"    type="BookList"/>
+        <input name="title" type="String"/>
+        <input name="author" type="String"/>
+        <output name="books" type="BookList"/>
       </useCases>
-
       <useCases name="CheckAvailability">
-        <input  name="bookId"      type="UUID"/>
-        <output name="available"   type="Boolean"/>
-        <output name="copies"      type="Integer"/>
+        <input name="bookId" type="UUID"/>
+        <output name="available" type="Boolean"/>
+        <output name="copies" type="Integer"/>
       </useCases>
-
     </services>
-
   </application>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- DOMAIN CORE                                 -->
-  <!-- ═══════════════════════════════════════════ -->
   <domain name="Domain">
-
-    <!-- Aggregate: Loan -->
     <aggregates name="Loan">
-      <members xsi:type="p:Attribute" name="loanId"     type="UUID"/>
-      <members xsi:type="p:Attribute" name="status"     type="LoanStatus"/>
-      <members xsi:type="p:Attribute" name="loanDate"   type="DateTime"/>
-      <members xsi:type="p:Attribute" name="dueDate"    type="DateTime"/>
+      <members xsi:type="p:Attribute" name="loanId" type="UUID"/>
+      <members xsi:type="p:Attribute" name="status" type="LoanStatus"/>
+      <members xsi:type="p:Attribute" name="loanDate" type="DateTime"/>
+      <members xsi:type="p:Attribute" name="dueDate" type="DateTime"/>
       <members xsi:type="p:Attribute" name="returnDate" type="DateTime"/>
-      <members xsi:type="p:Attribute" name="fine"       type="Decimal"/>
-      <members xsi:type="p:Entity"    name="LoanEntity"/>
+      <members xsi:type="p:Attribute" name="fine" type="Decimal"/>
+      <members xsi:type="p:Entity" name="LoanEntity"/>
       <members xsi:type="p:ValueObject" name="LoanPeriod"/>
     </aggregates>
-
-    <!-- Aggregate: Book -->
     <aggregates name="Book">
-      <members xsi:type="p:Attribute" name="bookId"    type="UUID"/>
-      <members xsi:type="p:Attribute" name="title"     type="String"/>
-      <members xsi:type="p:Attribute" name="author"    type="String"/>
-      <members xsi:type="p:Attribute" name="isbn"      type="String"/>
-      <members xsi:type="p:Attribute" name="copies"    type="Integer"/>
-      <members xsi:type="p:Entity"    name="BookEntity"/>
+      <members xsi:type="p:Attribute" name="bookId" type="UUID"/>
+      <members xsi:type="p:Attribute" name="title" type="String"/>
+      <members xsi:type="p:Attribute" name="author" type="String"/>
+      <members xsi:type="p:Attribute" name="isbn" type="String"/>
+      <members xsi:type="p:Attribute" name="copies" type="Integer"/>
+      <members xsi:type="p:Entity" name="BookEntity"/>
       <members xsi:type="p:ValueObject" name="BookMetadata"/>
     </aggregates>
-
-    <!-- Domain Service -->
     <domainServices name="FineCalculatorService">
-      <operations name="calculateFine"    returnType="Decimal"/>
-      <operations name="isOverdue"        returnType="Boolean"/>
+      <operations name="calculateFine" returnType="Decimal"/>
+      <operations name="isOverdue" returnType="Boolean"/>
     </domainServices>
-
     <domainServices name="AvailabilityService">
       <operations name="checkAvailability" returnType="Boolean"/>
-      <operations name="reserveCopy"       returnType="void"/>
+      <operations name="reserveCopy" returnType="void"/>
     </domainServices>
-
-    <!-- Domain Events -->
     <events name="LoanRequested">
-      <payload name="loanId"     type="UUID"/>
-      <payload name="bookId"     type="UUID"/>
-      <payload name="memberId"   type="UUID"/>
-      <payload name="loanDate"   type="DateTime"/>
+      <payload name="loanId" type="UUID"/>
+      <payload name="bookId" type="UUID"/>
+      <payload name="memberId" type="UUID"/>
+      <payload name="loanDate" type="DateTime"/>
     </events>
-
     <events name="BookReturned">
-      <payload name="loanId"     type="UUID"/>
+      <payload name="loanId" type="UUID"/>
       <payload name="returnDate" type="DateTime"/>
-      <payload name="fine"       type="Decimal"/>
+      <payload name="fine" type="Decimal"/>
     </events>
-
     <events name="LoanOverdue">
-      <payload name="loanId"   type="UUID"/>
-      <payload name="dueDate"  type="DateTime"/>
-      <payload name="fine"     type="Decimal"/>
+      <payload name="loanId" type="UUID"/>
+      <payload name="dueDate" type="DateTime"/>
+      <payload name="fine" type="Decimal"/>
     </events>
-
   </domain>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- EXTERNAL SYSTEMS                            -->
-  <!-- ═══════════════════════════════════════════ -->
+  <links xsi:type="p:AdapterPortLink" name="LoanControllerToPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="p:AdapterPortLink" name="BookControllerToPort" source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="p:AdapterPortLink" name="LoanRepoToPort" source="//@infrastructure/@adapters.2" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="p:AdapterPortLink" name="BookRepoToPort" source="//@infrastructure/@adapters.3" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="p:AdapterPortLink" name="EmailToPort" source="//@infrastructure/@adapters.4" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="p:ExternalSystemLink" name="RestClientToLoanController" source="//@externalSystems.0" target="//@infrastructure/@adapters.0"/>
+  <links xsi:type="p:ExternalSystemLink" name="DBToLoanRepo" source="//@externalSystems.1" target="//@infrastructure/@adapters.2"/>
+  <links xsi:type="p:ExternalSystemLink" name="SMTPToEmail" source="//@externalSystems.2" target="//@infrastructure/@adapters.4"/>
+  <links xsi:type="p:ServicePortLink" name="LoanServiceExposesInbound" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="p:ServicePortLink" name="LoanServiceCallsRepo" source="//@application/@services.0" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="p:ServicePortLink" name="LoanServiceCallsNotification" source="//@application/@services.0" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="p:ServiceAggregateLink" name="LoanServiceToLoanAggregate" source="//@application/@services.0" target="//@domain/@aggregates.0"/>
+  <links xsi:type="p:ServiceAggregateLink" name="BookServiceToBookAggregate" source="//@application/@services.1" target="//@domain/@aggregates.1"/>
+  <links xsi:type="p:ServiceDomainServiceLink" name="LoanServiceToFineCalculator" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
+  <links xsi:type="p:ServiceDomainServiceLink" name="BookServiceToAvailability" source="//@application/@services.1" target="//@domain/@domainServices.1"/>
   <externalSystems name="RESTClient"/>
   <externalSystems name="RelationalDB"/>
   <externalSystems name="SMTPServer"/>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- CROSS-LAYER LINKS                           -->
-  <!-- ═══════════════════════════════════════════ -->
-
-  <!-- Adapter → Port -->
-  <links xsi:type="p:AdapterPortLink" name="LoanControllerToPort"
-    source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
-  <links xsi:type="p:AdapterPortLink" name="BookControllerToPort"
-    source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.1"/>
-  <links xsi:type="p:AdapterPortLink" name="LoanRepoToPort"
-    source="//@infrastructure/@adapters.2" target="//@infrastructure/@ports.3"/>
-  <links xsi:type="p:AdapterPortLink" name="BookRepoToPort"
-    source="//@infrastructure/@adapters.3" target="//@infrastructure/@ports.4"/>
-  <links xsi:type="p:AdapterPortLink" name="EmailToPort"
-    source="//@infrastructure/@adapters.4" target="//@infrastructure/@ports.5"/>
-
-  <!-- ExternalSystem → Adapter -->
-  <links xsi:type="p:ExternalSystemLink" name="RestClientToLoanController"
-    source="//@externalSystems.0" target="//@infrastructure/@adapters.0"/>
-  <links xsi:type="p:ExternalSystemLink" name="DBToLoanRepo"
-    source="//@externalSystems.1" target="//@infrastructure/@adapters.2"/>
-  <links xsi:type="p:ExternalSystemLink" name="SMTPToEmail"
-    source="//@externalSystems.2" target="//@infrastructure/@adapters.4"/>
-
-  <!-- Service → Port -->
-  <links xsi:type="p:ServicePortLink" name="LoanServiceExposesInbound"
-    source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
-  <links xsi:type="p:ServicePortLink" name="LoanServiceCallsRepo"
-    source="//@application/@services.0" target="//@infrastructure/@ports.3"/>
-  <links xsi:type="p:ServicePortLink" name="LoanServiceCallsNotification"
-    source="//@application/@services.0" target="//@infrastructure/@ports.5"/>
-
-  <!-- Service → Aggregate -->
-  <links xsi:type="p:ServiceAggregateLink" name="LoanServiceToLoanAggregate"
-    source="//@application/@services.0" target="//@domain/@aggregates.0"/>
-  <links xsi:type="p:ServiceAggregateLink" name="BookServiceToBookAggregate"
-    source="//@application/@services.1" target="//@domain/@aggregates.1"/>
-
-  <!-- Service → DomainService -->
-  <links xsi:type="p:ServiceDomainServiceLink" name="LoanServiceToFineCalculator"
-    source="//@application/@services.0" target="//@domain/@domainServices.0"/>
-  <links xsi:type="p:ServiceDomainServiceLink" name="BookServiceToAvailability"
-    source="//@application/@services.1" target="//@domain/@domainServices.1"/>
-
 </p:Hexagon>

@@ -1,0 +1,82 @@
+[%/*-- Hexagonal2PlantUML.egl --*/%]
+[%/*-- Load the metamodel --*/%]
+[%/*  model = EMFCopier.load('hexagonalpro.emf') /*/%]
+@startuml
+skinparam packageStyle rectangle
+[% 
+var h = hexagon;
+var infra = h.infrastructure;
+%]
+  [%/*-- Infrastructure Layer --*/%]
+  package "Infrastructure Layer" as INFRA {
+     [% for (p in infra.ports) {%]
+      [%if (p.isTypeOf(InboundPort)) {%]
+        () "[%=p.name%]" as [%=p.name%] <<inbound>>
+      [%} else {%]
+        [%if (p.name.matches('.*Repository')) {%]
+          interface "[%=p.name%]" as [%=p.name%] <<repository>>
+        [%} else {%]
+          () "[%=p.name%]" as [%=p.name%] <<outbound>>
+        [%}%]
+      [%}%]
+    [%}%]
+   
+    [% for (a in infra.adapters) {%]
+      component "[%=a.name%]" as [%=a.name%] <<adapter>>
+    [%}%]
+  }
+  
+  [%/*-- Application Layer --*/%]
+  package "Application Layer" as APP {
+    [% for (svc in h.application.services) {%]
+      component "[%=svc.name%]" as [%=svc.name%] <<service>> {
+        [% for (uc in svc.useCases) {%]
+          usecase [%=uc.name%]
+        [%}%]
+      }
+    [%}%]
+  }
+  
+  [%/* Domain Layer */%]
+  package "Domain Core" as DOMAIN {
+    [% for (agg in h.domain.aggregates) {%]
+      package "[%=agg.name%]" as [%=agg.name%] <<aggregate>> {
+        [% for (obj in agg.members) {%]
+          [%if (obj.isKindOf(Entity)) {%]
+            component "[%=obj.name%]" as [%=obj.name%] <<entity>>
+          [%}%]
+          [%if (obj.isKindOf(ValueObject)) {%]
+            component "[%=obj.name%]" as [%=obj.name%] <<value-object>>
+          [%}%]
+        [%}%]
+      }
+    [%}%]
+    
+    [% for (ds in h.domain.domainServices) {%]
+      component "[%=ds.name%]" as [%=ds.name%] <<domain-service>>
+    [%}%]
+    
+    [% for (evt in h.domain.events) {%]
+      component "[%=evt.name%]" as [%=evt.name%] <<event>>
+    [%}%]
+  }
+  
+  [%/*Draw Links */%]
+  [% for (link in h.links) {%]
+    [%if (link.isTypeOf(AdapterPortLink)) {%]
+      [%=link.source.name%] --> [%=link.target.name%]
+    [%}%]
+    [%if (link.isTypeOf(ServicePortLink)) {%]
+      [%=link.source.name%] --> [%=link.target.name%]
+    [%}%]
+    [%if (link.isTypeOf(ServiceAggregateLink)) {%]
+      [%=link.source.name%] --> [%=link.target.name%]
+    [%}%]
+    [%if (link.isTypeOf(ServiceDomainServiceLink)) {%]
+      [%=link.source.name%] --> [%=link.target.name%]
+    [%}%]
+    [%if (link.isTypeOf(ExternalSystemLink)) {%]
+      [%=link.source.name%] --> [%=link.target.name%]
+    [%}%]
+  [%}%]
+@enduml
