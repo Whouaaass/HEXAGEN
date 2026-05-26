@@ -53,15 +53,10 @@ class ApplicationService {
 	val UseCase[*] useCases;
 }
 
-class UseCaseParameter {
-	attr String name;
-	attr String type;
-}
-
 class UseCase {
 	attr String name;
-	val UseCaseParameter[*] input;
-	val UseCaseParameter[*] output;
+	val DomainObject[*] input;
+	val DomainObject[*] output;
 }
 
 // Domain
