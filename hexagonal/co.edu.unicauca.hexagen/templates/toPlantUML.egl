@@ -26,6 +26,11 @@ var infra = h.infrastructure;
     [%}%]
   }
   
+  [%/*-- External Systems --*/%]
+  [% for (es in h.externalSystems) {%]
+    component "[%=es.name%]" as [%=es.name%] <<external>>
+  [%}%]
+  
   [%/*-- Application Layer --*/%]
   package "Application Layer" as APP {
     [% for (svc in h.application.services) {%]
@@ -76,7 +81,11 @@ var infra = h.infrastructure;
       [%=link.source.name%] --> [%=link.target.name%]
     [%}%]
     [%if (link.isTypeOf(ExternalSystemLink)) {%]
+      [%if (link.target.isTypeOf(OutboundAdapter)) {%]
+      [%=link.target.name%] --> [%=link.source.name%]
+      [%} else {%]
       [%=link.source.name%] --> [%=link.target.name%]
+      [%}%]
     [%}%]
   [%}%]
 @enduml

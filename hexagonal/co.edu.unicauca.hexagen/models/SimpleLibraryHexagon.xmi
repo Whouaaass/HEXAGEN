@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal ../metamodels/v4/hexagonalpro.ecore" name="SimpleLibraryHexagon">
+  <infrastructure name="Infrastructure">
+    <ports xsi:type="p:InboundPort" name="LibraryPortal"/>
+    <ports xsi:type="p:OutboundPort" name="PersistencePort"/>
+    <adapters xsi:type="p:InboundAdapter" name="LibraryController"/>
+    <adapters xsi:type="p:OutboundAdapter" name="LibraryRepository"/>
+  </infrastructure>
+  <application name="Application">
+    <services name="LibraryService">
+      <useCases name="BorrowBook">
+        <input name="bookId" type="String"/>
+        <input name="memberId" type="String"/>
+        <output name="dueDate" type="String"/>
+      </useCases>
+      <useCases name="ReturnBook">
+        <input name="loanId" type="String"/>
+        <output name="fine" type="String"/>
+      </useCases>
+    </services>
+  </application>
+  <domain name="Domain">
+    <aggregates name="Loan">
+      <members xsi:type="p:Attribute" name="loanId" type="String"/>
+      <members xsi:type="p:Attribute" name="bookId" type="String"/>
+      <members xsi:type="p:Attribute" name="memberId" type="String"/>
+      <members xsi:type="p:Attribute" name="borrowDate" type="String"/>
+      <members xsi:type="p:Attribute" name="dueDate" type="String"/>
+      <members xsi:type="p:Attribute" name="returned" type="Boolean"/>
+      <members xsi:type="p:Entity" name="LoanRecord"/>
+    </aggregates>
+    <domainServices name="FineCalculator">
+      <operations name="calculateFine" returnType="String"/>
+    </domainServices>
+    <events name="BookBorrowed">
+      <payload name="loanId" type="String"/>
+      <payload name="bookId" type="String"/>
+    </events>
+    <events name="BookReturned">
+      <payload name="loanId" type="String"/>
+      <payload name="fine" type="String"/>
+    </events>
+  </domain>
+  <links xsi:type="p:AdapterPortLink" name="ControllerToPortal" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="p:AdapterPortLink" name="RepoToPort" source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="p:ExternalSystemLink" name="WebClientToController" source="//@externalSystems.0" target="//@infrastructure/@adapters.0"/>
+  <links xsi:type="p:ExternalSystemLink" name="DBToRepo" source="//@externalSystems.1" target="//@infrastructure/@adapters.1"/>
+  <links xsi:type="p:ServicePortLink" name="ServiceExposesPortal" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="p:ServicePortLink" name="ServiceCallsPersistence" source="//@application/@services.0" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="p:ServiceAggregateLink" name="ServiceToLoanAggregate" source="//@application/@services.0" target="//@domain/@aggregates.0"/>
+  <links xsi:type="p:ServiceDomainServiceLink" name="ServiceToFineCalculator" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
+  <externalSystems name="WebClient"/>
+  <externalSystems name="Database"/>
+</p:Hexagon>
