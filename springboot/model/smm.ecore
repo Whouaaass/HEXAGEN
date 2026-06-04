@@ -26,6 +26,11 @@
     <eLiterals name="SET" value="1"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Type" abstract="true"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Enum">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="documentation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="package" eType="#//JavaPackage"/>
+  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="PrimitiveType" eSuperTypes="#//Type">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//PrimitiveKind"/>
   </eClassifiers>
@@ -53,32 +58,9 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="BoundedContext">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="domain" eType="#//DomainLayer"
-        containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="application" eType="#//ApplicationLayer"
-        containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="infrastructure" eType="#//InfrastructureLayer"
-        containment="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="DomainLayer">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="entities" upperBound="-1"
-        eType="#//Entity" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="valueObjects" upperBound="-1"
-        eType="#//ValueObject" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="repositoryPorts" upperBound="-1"
-        eType="#//RepositoryPort" containment="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="ApplicationLayer">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="services" upperBound="-1"
-        eType="#//Service" containment="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="InfrastructureLayer">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="controllers" upperBound="-1"
-        eType="#//Controller" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="repositoryAdapters" upperBound="-1"
-        eType="#//RepositoryAdapter" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="dtos" upperBound="-1" eType="#//Dto"
-        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="domain" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="application" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="infrastructure" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="NamedElement" abstract="true">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
@@ -94,16 +76,8 @@
         containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="ValueObject" eSuperTypes="#//JavaClass"/>
-  <eClassifiers xsi:type="ecore:EClass" name="RepositoryPort" eSuperTypes="#//NamedElement">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="entityType" eType="#//Entity"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="idType" eType="#//Type"
-        containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="methods" upperBound="-1"
-        eType="#//Method" containment="true"/>
-  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Service" eSuperTypes="#//JavaClass">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="requiredPorts" upperBound="-1"
-        eType="#//RepositoryPort"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="requiredPorts" upperBound="-1"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Controller" eSuperTypes="#//JavaClass">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="basePath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
@@ -111,8 +85,8 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="endpoints" upperBound="-1"
         eType="#//Endpoint" containment="true"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="RepositoryAdapter" eSuperTypes="#//JavaClass">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="implementsPort" eType="#//RepositoryPort"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Repository" eSuperTypes="#//JavaClass">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="implementsPort"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Dto" eSuperTypes="#//JavaClass"/>
   <eClassifiers xsi:type="ecore:EClass" name="Attribute" eSuperTypes="#//NamedElement">
@@ -133,5 +107,15 @@
   <eClassifiers xsi:type="ecore:EClass" name="Parameter" eSuperTypes="#//NamedElement">
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//Type" containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//ParamKind"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="JavaPackage" eSuperTypes="#//NamedElement">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="myChilds" eType="#//NamedElement"
+        containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Interface" eSuperTypes="#//NamedElement">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="attributes" upperBound="-1"
+        eType="#//Attribute" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="methods" upperBound="-1"
+        eType="#//Method" containment="true"/>
   </eClassifiers>
 </ecore:EPackage>
