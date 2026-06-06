@@ -1,0 +1,402 @@
+/**
+ * Validaciones EVL para el Metamodelo Hexagonal (Hexagon)
+ * Universidad del Cauca - Proyecto HEXAGEN
+ * Equipo B: Metamodelo Hexagonal
+ * 
+ * Sintaxis EVL
+ */
+
+context Hexagon {
+    
+    // ==================== VALIDACIONES BÁSICAS ====================
+    
+    constraint HexagonHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El Hexágono debe tener un nombre no vacío"
+    }
+    
+    constraint HexagonHasInfrastructure {
+        check: self.infrastructure <> null
+        message: "El Hexágono debe tener una capa Infrastructure"
+    }
+    
+    constraint HexagonHasApplication {
+        check: self.application <> null
+        message: "El Hexágono debe tener una capa Application"
+    }
+    
+    constraint HexagonHasDomain {
+        check: self.domain <> null
+        message: "El Hexágono debe tener una capa Domain"
+    }
+    
+    constraint InfrastructureHasName {
+        check: self.infrastructure.name <> null and self.infrastructure.name.length() > 0
+        message: "La capa Infrastructure debe tener un nombre"
+    }
+    
+    constraint ApplicationHasName {
+        check: self.application.name <> null and self.application.name.length() > 0
+        message: "La capa Application debe tener un nombre"
+    }
+    
+    constraint DomainHasName {
+        check: self.domain.name <> null and self.domain.name.length() > 0
+        message: "La capa Domain debe tener un nombre"
+    }
+    
+    // ==================== VALIDACIONES DE INFRASTRUCTURE ====================
+    
+    constraint InfrastructureHasPorts {
+        check: self.infrastructure.ports.size() > 0
+        message: "La Infrastructure debe tener al menos un Puerto"
+    }
+    
+    constraint InfrastructureHasAdapters {
+        check: self.infrastructure.adapters.size() > 0
+        message: "La Infrastructure debe tener al menos un Adaptador"
+    }
+    
+    constraint HasInboundPorts {
+        check: self.infrastructure.ports.select(p | p.isTypeOf(InboundPort)).size() > 0
+        message: "Debe existir al menos un InboundPort"
+    }
+    
+    constraint HasOutboundPorts {
+        check: self.infrastructure.ports.select(p | p.isTypeOf(OutboundPort)).size() > 0
+        message: "Debe existir al menos un OutboundPort"
+    }
+    
+    constraint HasInboundAdapters {
+        check: self.infrastructure.adapters.select(a | a.isTypeOf(InboundAdapter)).size() > 0
+        message: "Debe existir al menos un InboundAdapter"
+    }
+    
+    constraint HasOutboundAdapters {
+        check: self.infrastructure.adapters.select(a | a.isTypeOf(OutboundAdapter)).size() > 0
+        message: "Debe existir al menos un OutboundAdapter"
+    }
+    
+    // ==================== VALIDACIONES DE APPLICATION ====================
+    
+    constraint ApplicationHasServices {
+        check: self.application.services.size() > 0
+        message: "La Application debe tener al menos un Service"
+    }
+    
+    // ==================== VALIDACIONES DE DOMAIN ====================
+    
+    constraint DomainHasAggregates {
+        check: self.domain.aggregates.size() > 0
+        message: "El Domain debe tener al menos un Agregado"
+    }
+    
+    constraint DomainHasServices {
+        check: self.domain.domainServices.size() > 0
+        message: "El Domain debe tener al menos un DomainService"
+    }
+    
+    // ==================== VALIDACIONES DE LINKS ====================
+    
+    constraint AllLinksHaveNames {
+        check: self.links.select(l | l.name = null or l.name.length() = 0).size() = 0
+        message: "Todos los Links deben tener un nombre"
+    }
+    
+    constraint AllAdaptersAreLinked {
+        check: self.infrastructure.adapters.select(adapter | 
+            self.links.select(l | l.isTypeOf(AdapterPortLink) and l.source = adapter).size() = 0).size() = 0
+        message: "Todos los Adaptadores deben estar vinculados a un Puerto"
+    }
+    
+    constraint AllExternalSystemsAreLinked {
+        check: self.externalSystems.select(es | 
+            self.links.select(l | l.isTypeOf(ExternalSystemLink) and l.source = es).size() = 0).size() = 0
+        message: "Todos los ExternalSystems deben estar vinculados a un Adaptador"
+    }
+}
+
+// ==================== VALIDACIONES DE PORT ====================
+
+context Port {
+    
+    constraint PortHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El Puerto debe tener un nombre no vacío"
+    }
+    
+    constraint PortNameEndsWithPort {
+        check: self.name.endsWith("Port") or self.name.endsWith("port")
+        message: "El nombre del Puerto debe terminar con 'Port' (recomendado)"
+    }
+}
+
+// ==================== VALIDACIONES DE INBOUND PORT ====================
+
+context InboundPort {
+    
+    constraint InboundPortHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El InboundPort debe tener un nombre"
+    }
+}
+
+// ==================== VALIDACIONES DE OUTBOUND PORT ====================
+
+context OutboundPort {
+    
+    constraint OutboundPortHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El OutboundPort debe tener un nombre"
+    }
+}
+
+// ==================== VALIDACIONES DE ADAPTER ====================
+
+context Adapter {
+    
+    constraint AdapterHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El Adaptador debe tener un nombre no vacío"
+    }
+}
+
+// ==================== VALIDACIONES DE INBOUND ADAPTER ====================
+
+context InboundAdapter {
+    
+    constraint InboundAdapterNaming {
+        check: self.name.endsWith("Controller") or self.name.endsWith("Adapter") or self.name.endsWith("REST")
+        message: "El InboundAdapter debe terminar con 'Controller', 'Adapter' o 'REST' (recomendado)"
+    }
+}
+
+// ==================== VALIDACIONES DE OUTBOUND ADAPTER ====================
+
+context OutboundAdapter {
+    
+    constraint OutboundAdapterNaming {
+        check: self.name.endsWith("Repository") or self.name.endsWith("Adapter") or self.name.endsWith("ORM")
+        message: "El OutboundAdapter debe terminar con 'Repository', 'Adapter' u 'ORM' (recomendado)"
+    }
+}
+
+// ==================== VALIDACIONES DE APPLICATION SERVICE ====================
+
+context ApplicationService {
+    
+    constraint ServiceHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El ApplicationService debe tener un nombre"
+    }
+    
+    constraint ServiceHasUseCases {
+        check: self.useCases.size() > 0
+        message: "El ApplicationService debe tener al menos un UseCase"
+    }
+    
+    constraint ServiceNameEndsWithService {
+        check: self.name.endsWith("Service")
+        message: "El nombre del Service debe terminar con 'Service' (recomendado)"
+    }
+}
+
+// ==================== VALIDACIONES DE USECASE ====================
+
+context UseCase {
+    
+    constraint UseCaseHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El UseCase debe tener un nombre"
+    }
+    
+    constraint UseCaseHasInputOrOutput {
+        check: (self.input.size() > 0) or (self.output.size() > 0)
+        message: "El UseCase debe tener al menos una entrada o una salida"
+    }
+}
+
+// ==================== VALIDACIONES DE DOMAIN CORE ====================
+
+context DomainCore {
+    
+    constraint DomainHasContent {
+        check: (self.aggregates.size() > 0) or (self.domainServices.size() > 0) or (self.objects.size() > 0)
+        message: "El DomainCore debe contener Agregados, DomainServices u Objects"
+    }
+}
+
+// ==================== VALIDACIONES DE AGGREGATE ROOT ====================
+
+context AggregateRoot {
+    
+    constraint AggregateHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El Agregado debe tener un nombre"
+    }
+    
+    constraint AggregateHasMembers {
+        check: self.members.size() > 0
+        message: "El Agregado debe contener al menos un miembro"
+    }
+}
+
+// ==================== VALIDACIONES DE DOMAIN OBJECT ====================
+
+context DomainObject {
+    
+    constraint DomainObjectHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El DomainObject debe tener un nombre"
+    }
+}
+
+// ==================== VALIDACIONES DE ATTRIBUTE ====================
+
+context Attribute {
+    
+    constraint AttributeHasType {
+        check: self.type <> null and self.type.length() > 0
+        message: "El Attribute debe especificar un tipo"
+    }
+}
+
+// ==================== VALIDACIONES DE DOMAIN SERVICE ====================
+
+context DomainService {
+    
+    constraint DomainServiceHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El DomainService debe tener un nombre"
+    }
+    
+    constraint DomainServiceHasOperations {
+        check: self.operations.size() > 0
+        message: "El DomainService debe tener al menos una operación"
+    }
+}
+
+// ==================== VALIDACIONES DE DOMAIN OPERATION ====================
+
+context DomainOperation {
+    
+    constraint OperationHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "La operación debe tener un nombre"
+    }
+    
+    constraint OperationHasReturnType {
+        check: self.returnType <> null and self.returnType.length() > 0
+        message: "La operación debe especificar un tipo de retorno"
+    }
+}
+
+// ==================== VALIDACIONES DE DOMAIN EVENT ====================
+
+context DomainEvent {
+    
+    constraint EventHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El DomainEvent debe tener un nombre"
+    }
+    
+    constraint EventHasPayload {
+        check: self.payload.size() > 0
+        message: "El DomainEvent debe tener al menos un atributo en su payload"
+    }
+}
+
+// ==================== VALIDACIONES DE EXTERNAL SYSTEM ====================
+
+context ExternalSystem {
+    
+    constraint ExternalSystemHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El ExternalSystem debe tener un nombre"
+    }
+}
+
+// ==================== VALIDACIONES DE HEXAGON LINK ====================
+
+context HexagonLink {
+    
+    constraint LinkHasName {
+        check: self.name <> null and self.name.length() > 0
+        message: "El Link debe tener un nombre"
+    }
+}
+
+// ==================== VALIDACIONES DE ADAPTER PORT LINK ====================
+
+context AdapterPortLink {
+    
+    constraint AdapterPortLinkHasSource {
+        check: self.source <> null
+        message: "El AdapterPortLink debe tener un source (Adapter)"
+    }
+    
+    constraint AdapterPortLinkHasTarget {
+        check: self.target <> null
+        message: "El AdapterPortLink debe tener un target (Port)"
+    }
+}
+
+// ==================== VALIDACIONES DE EXTERNAL SYSTEM LINK ====================
+
+context ExternalSystemLink {
+    
+    constraint ExternalSystemLinkHasSource {
+        check: self.source <> null
+        message: "El ExternalSystemLink debe tener un source (ExternalSystem)"
+    }
+    
+    constraint ExternalSystemLinkHasTarget {
+        check: self.target <> null
+        message: "El ExternalSystemLink debe tener un target (Adapter)"
+    }
+}
+
+// ==================== VALIDACIONES DE SERVICE PORT LINK ====================
+
+context ServicePortLink {
+    
+    constraint ServicePortLinkHasSource {
+        check: self.source <> null
+        message: "El ServicePortLink debe tener un source (ApplicationService)"
+    }
+    
+    constraint ServicePortLinkHasTarget {
+        check: self.target <> null
+        message: "El ServicePortLink debe tener un target (Port)"
+    }
+}
+
+// ==================== VALIDACIONES DE SERVICE AGGREGATE LINK ====================
+
+context ServiceAggregateLink {
+    
+    constraint ServiceAggregateLinkHasSource {
+        check: self.source <> null
+        message: "El ServiceAggregateLink debe tener un source (ApplicationService)"
+    }
+    
+    constraint ServiceAggregateLinkHasTarget {
+        check: self.target <> null
+        message: "El ServiceAggregateLink debe tener un target (AggregateRoot)"
+    }
+}
+
+// ==================== VALIDACIONES DE SERVICE DOMAIN SERVICE LINK ====================
+
+context ServiceDomainServiceLink {
+    
+    constraint ServiceDomainServiceLinkHasSource {
+        check: self.source <> null
+        message: "El ServiceDomainServiceLink debe tener un source (ApplicationService)"
+    }
+    
+    constraint ServiceDomainServiceLinkHasTarget {
+        check: self.target <> null
+        message: "El ServiceDomainServiceLink debe tener un target (DomainService)"
+    }
+}

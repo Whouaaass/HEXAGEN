@@ -104,6 +104,8 @@
   <links xsi:type="p:ServicePortLink" name="LoanServiceExposesInbound" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
   <links xsi:type="p:ServicePortLink" name="LoanServiceCallsRepo" source="//@application/@services.0" target="//@infrastructure/@ports.3"/>
   <links xsi:type="p:ServicePortLink" name="LoanServiceCallsNotification" source="//@application/@services.0" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="p:ServicePortLink" name="BookServiceExposesQuery" source="//@application/@services.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="p:ServicePortLink" name="BookServiceCallsRepo" source="//@application/@services.1" target="//@infrastructure/@ports.4"/>
   <links xsi:type="p:ServiceAggregateLink" name="LoanServiceToLoanAggregate" source="//@application/@services.0" target="//@domain/@aggregates.0"/>
   <links xsi:type="p:ServiceAggregateLink" name="BookServiceToBookAggregate" source="//@application/@services.1" target="//@domain/@aggregates.1"/>
   <links xsi:type="p:ServiceDomainServiceLink" name="LoanServiceToFineCalculator" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
