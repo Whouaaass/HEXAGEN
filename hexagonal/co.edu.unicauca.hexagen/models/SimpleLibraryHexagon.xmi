@@ -9,13 +9,13 @@
   <application name="Application">
     <services name="LibraryService">
       <useCases name="BorrowBook">
-        <input name="bookId" type="String"/>
-        <input name="memberId" type="String"/>
-        <output name="dueDate" type="String"/>
+        <input xsi:type="p:Attribute" name="bookId" type="String"/>
+        <input xsi:type="p:Attribute" name="memberId" type="String"/>
+        <output xsi:type="p:Attribute" name="dueDate" type="String"/>
       </useCases>
       <useCases name="ReturnBook">
-        <input name="loanId" type="String"/>
-        <output name="fine" type="String"/>
+        <input xsi:type="p:Attribute" name="loanId" type="String"/>
+        <output xsi:type="p:Attribute" name="fine" type="String"/>
       </useCases>
     </services>
   </application>

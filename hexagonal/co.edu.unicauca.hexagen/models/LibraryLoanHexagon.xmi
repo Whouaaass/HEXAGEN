@@ -16,35 +16,35 @@
   <application name="Application">
     <services name="LoanService">
       <useCases name="RequestLoan">
-        <input name="bookId" type="UUID"/>
-        <input name="memberId" type="UUID"/>
-        <output name="loanId" type="UUID"/>
-        <output name="dueDate" type="DateTime"/>
+        <input xsi:type="p:Attribute" name="bookId" type="UUID"/>
+        <input xsi:type="p:Attribute" name="memberId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="dueDate" type="DateTime"/>
       </useCases>
       <useCases name="ReturnBook">
-        <input name="loanId" type="UUID"/>
-        <output name="status" type="LoanStatus"/>
-        <output name="fine" type="Decimal"/>
+        <input xsi:type="p:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="status" type="LoanStatus"/>
+        <output xsi:type="p:Attribute" name="fine" type="Decimal"/>
       </useCases>
       <useCases name="RenewLoan">
-        <input name="loanId" type="UUID"/>
-        <output name="newDueDate" type="DateTime"/>
+        <input xsi:type="p:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="newDueDate" type="DateTime"/>
       </useCases>
       <useCases name="GetLoanHistory">
-        <input name="memberId" type="UUID"/>
-        <output name="loans" type="LoanList"/>
+        <input xsi:type="p:Attribute" name="memberId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="loans" type="LoanList"/>
       </useCases>
     </services>
     <services name="BookService">
       <useCases name="SearchBook">
-        <input name="title" type="String"/>
-        <input name="author" type="String"/>
-        <output name="books" type="BookList"/>
+        <input xsi:type="p:Attribute" name="title" type="String"/>
+        <input xsi:type="p:Attribute" name="author" type="String"/>
+        <output xsi:type="p:Attribute" name="books" type="BookList"/>
       </useCases>
       <useCases name="CheckAvailability">
-        <input name="bookId" type="UUID"/>
-        <output name="available" type="Boolean"/>
-        <output name="copies" type="Integer"/>
+        <input xsi:type="p:Attribute" name="bookId" type="UUID"/>
+        <output xsi:type="p:Attribute" name="available" type="Boolean"/>
+        <output xsi:type="p:Attribute" name="copies" type="Integer"/>
       </useCases>
     </services>
   </application>
