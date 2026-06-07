@@ -81,9 +81,11 @@ class AggregateRoot extends DomainObject {
 }
 
 class Entity extends DomainObject {
+	val Attribute[*] values;
 }
 
 class ValueObject extends DomainObject {
+	val Attribute[*] values; 
 }
 
 class DomainOperation extends DomainObject {
