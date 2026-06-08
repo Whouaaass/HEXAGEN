@@ -72,12 +72,17 @@ abstract class DomainObject {
 	attr String name;
 }
 
+interface DomainRelatable {
+	
+}
+
 class Attribute extends DomainObject {
 	attr String type;
 }
 
 class AggregateRoot extends DomainObject {
 	val DomainObject[*] members;
+	val DomainRelationship[*]#source rels;
 }
 
 class Entity extends DomainObject {
@@ -86,6 +91,7 @@ class Entity extends DomainObject {
 
 class ValueObject extends DomainObject {
 	val Attribute[*] values; 
+	
 }
 
 class DomainOperation extends DomainObject {
@@ -103,12 +109,26 @@ class DomainEvent {
 	val Attribute[*] payload;
 }
 
+class DomainRelationship {
+	attr String name;
+	attr DomainRelMultiplicty endMultiplicity; 
+	readonly transient ref AggregateRoot#rels source;
+	ref AggregateRoot target;
+}
+
+enum DomainRelMultiplicty {
+	ONE;
+	MANY;
+}
+
+
+// Links
 abstract class HexagonLink {
 	attr String name;
 	attr String description;
 }
 
-// Links
+
 class AdapterPortLink extends HexagonLink {
 	ref Adapter[1] source;
 	ref Port[1] target;
