@@ -1,0 +1,83 @@
+@startuml
+skinparam packageStyle rectangle
+  package "Infrastructure Layer" as INFRA {
+        () "LoanRequestPort" as LoanRequestPort <<inbound>>
+        () "BookQueryPort" as BookQueryPort <<inbound>>
+        () "ReturnBookPort" as ReturnBookPort <<inbound>>
+        () "RenewLoanPort" as RenewLoanPort <<inbound>>
+          () "LoanRepositoryPort" as LoanRepositoryPort <<outbound>>
+          () "BookRepositoryPort" as BookRepositoryPort <<outbound>>
+          () "NotificationPort" as NotificationPort <<outbound>>
+   
+      component "LoanRestController" as LoanRestController <<adapter>>
+      component "BookRestController" as BookRestController <<adapter>>
+      component "ReturnBookController" as ReturnBookController <<adapter>>
+      component "RenewLoanController" as RenewLoanController <<adapter>>
+      component "LoanORMRepository" as LoanORMRepository <<adapter>>
+      component "BookORMRepository" as BookORMRepository <<adapter>>
+      component "EmailNotificationAdapter" as EmailNotificationAdapter <<adapter>>
+  }
+  
+    component "RESTClient" as RESTClient <<external>>
+    component "RelationalDB" as RelationalDB <<external>>
+    component "SMTPServer" as SMTPServer <<external>>
+  
+  package "Application Layer" as APP {
+      component "LoanService" as LoanService <<service>> {
+          usecase RequestLoan
+          usecase ReturnBook
+          usecase RenewLoan
+          usecase GetLoanHistory
+      }
+      component "BookService" as BookService <<service>> {
+          usecase SearchBook
+          usecase CheckAvailability
+      }
+  }
+  
+  package "Domain Core" as DOMAIN {
+      package "Loan" as Loan <<aggregate>> {
+            component "LoanEntity" as LoanEntity <<entity>>
+            component "BookRef" as BookRef <<entity>>
+            component "MemberRef" as MemberRef <<entity>>
+            component "LoanPeriod" as LoanPeriod <<value-object>>
+      }
+      package "Book" as Book <<aggregate>> {
+            component "BookEntity" as BookEntity <<entity>>
+            component "BookMetadata" as BookMetadata <<value-object>>
+      }
+    
+      component "FineCalculatorService" as FineCalculatorService <<domain-service>>
+      component "AvailabilityService" as AvailabilityService <<domain-service>>
+    
+      component "LoanRequested" as LoanRequested <<event>>
+      component "BookReturned" as BookReturned <<event>>
+      component "LoanOverdue" as LoanOverdue <<event>>
+  }
+  
+      LoanRestController --> LoanRequestPort
+      BookRestController --> BookQueryPort
+      ReturnBookController --> ReturnBookPort
+      RenewLoanController --> RenewLoanPort
+      LoanORMRepository --> LoanRepositoryPort
+      BookORMRepository --> BookRepositoryPort
+      EmailNotificationAdapter --> NotificationPort
+      RESTClient --> LoanRestController
+      RESTClient --> BookRestController
+      RESTClient --> ReturnBookController
+      RESTClient --> RenewLoanController
+      LoanORMRepository --> RelationalDB
+      BookORMRepository --> RelationalDB
+      EmailNotificationAdapter --> SMTPServer
+      LoanService --> LoanRequestPort
+      LoanService --> ReturnBookPort
+      LoanService --> RenewLoanPort
+      LoanService --> LoanRepositoryPort
+      LoanService --> NotificationPort
+      BookService --> BookQueryPort
+      BookService --> BookRepositoryPort
+      LoanService --> Loan
+      BookService --> Book
+      LoanService --> FineCalculatorService
+      BookService --> AvailabilityService
+@enduml

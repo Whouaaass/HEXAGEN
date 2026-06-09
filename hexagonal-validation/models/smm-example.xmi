@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smm:Application
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:smm="smm"
+    xsi:schemaLocation="smm smm.ecore"
+    name="Example"
+    basePackage="com.example"
+    javaVersion="21"
+    serverPort="8080">
+  <modules>
+    <entities>
+      <attributes/>
+    </entities>
+    <valueObjects>
+      <attributes/>
+    </valueObjects>
+    <repositories>
+      <methods/>
+    </repositories>
+    <services>
+      <methods/>
+    </services>
+    <controllers>
+      <methods
+          xsi:type="smm:Endpoint"/>
+    </controllers>
+  </modules>
+</smm:Application>

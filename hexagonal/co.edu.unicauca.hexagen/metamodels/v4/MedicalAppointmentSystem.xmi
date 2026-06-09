@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hmm:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:hmm="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal hexagonalpro.ecore" name="MedicalAppointmentSystem">
+  <infrastructure name="InfrastructureLayer">
+    <ports xsi:type="hmm:InboundPort" name="AppointmentPort"/>
+    <ports xsi:type="hmm:InboundPort" name="PatientPort"/>
+    <ports xsi:type="hmm:InboundPort" name="PrescriptionPort"/>
+    <ports xsi:type="hmm:InboundPort" name="MedicalRecordPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="NotificationPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="IdentityPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="InsurancePort"/>
+    <ports xsi:type="hmm:OutboundPort" name="BillingPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="EHRPort"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="RESTController"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="EmailNotificationAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="SMSServiceAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="IdentityProviderAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="InsuranceSystemAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="BillingPlatformAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="EHRSystemAdapter"/>
+  </infrastructure>
+  <application name="ApplicationLayer">
+    <services name="AppointmentManagementService">
+      <useCases name="ScheduleAppointment"/>
+      <useCases name="RescheduleAppointment"/>
+      <useCases name="CancelAppointment"/>
+      <useCases name="ConfirmAppointment"/>
+    </services>
+    <services name="PatientManagementService">
+      <useCases name="RegisterPatient"/>
+      <useCases name="ManagePatientProfile"/>
+      <useCases name="AccessMedicalRecord"/>
+    </services>
+    <services name="PrescriptionManagementService">
+      <useCases name="CreatePrescription"/>
+      <useCases name="RetrievePrescription"/>
+      <useCases name="ValidatePrescriptionStatus"/>
+    </services>
+    <services name="MedicalRecordService">
+      <useCases name="RecordConsultation"/>
+      <useCases name="ManageDiagnoses"/>
+      <useCases name="UpdateMedicalHistory"/>
+    </services>
+    <services name="NotificationService">
+      <useCases name="SendNotification"/>
+    </services>
+  </application>
+  <domain name="DomainCore">
+    <aggregates name="Patient">
+      <members xsi:type="hmm:Attribute" name="patientId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="fullName" type="String"/>
+      <members xsi:type="hmm:Attribute" name="dateOfBirth" type="Date"/>
+      <members xsi:type="hmm:Attribute" name="gender" type="String"/>
+      <members xsi:type="hmm:ValueObject" name="ContactInformation">
+        <values name="emailAddress" type="String"/>
+        <values name="phoneNumber" type="String"/>
+        <values name="emergencyContact" type="String"/>
+      </members>
+      <members xsi:type="hmm:ValueObject" name="InsuranceInformation">
+        <values name="providerName" type="String"/>
+        <values name="policyNumber" type="String"/>
+        <values name="coverageDetails" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="HealthcareProfessional">
+      <members xsi:type="hmm:Attribute" name="professionalId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="fullName" type="String"/>
+      <members xsi:type="hmm:Attribute" name="medicalSpecialty" type="String"/>
+      <members xsi:type="hmm:Attribute" name="licenseNumber" type="String"/>
+      <members xsi:type="hmm:ValueObject" name="ContactInformation">
+        <values name="emailAddress" type="String"/>
+        <values name="phoneNumber" type="String"/>
+        <values name="emergencyContact" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="Appointment">
+      <members xsi:type="hmm:Attribute" name="appointmentId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="status" type="AppointmentStatus"/>
+      <members xsi:type="hmm:Attribute" name="creationDate" type="DateTime"/>
+      <members xsi:type="hmm:ValueObject" name="AppointmentTimeSlot">
+        <values name="startDateTime" type="DateTime"/>
+        <values name="endDateTime" type="DateTime"/>
+      </members>
+    </aggregates>
+    <aggregates name="MedicalRecord">
+      <members xsi:type="hmm:Attribute" name="recordId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="creationDate" type="DateTime"/>
+      <members xsi:type="hmm:Attribute" name="lastUpdateDate" type="DateTime"/>
+      <members xsi:type="hmm:ValueObject" name="Diagnosis">
+        <values name="diagnosisCode" type="String"/>
+        <values name="description" type="String"/>
+        <values name="severityLevel" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="Prescription">
+      <members xsi:type="hmm:Attribute" name="prescriptionId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="issueDate" type="DateTime"/>
+      <members xsi:type="hmm:Attribute" name="expirationDate" type="DateTime"/>
+      <members xsi:type="hmm:ValueObject" name="Medication">
+        <values name="medicationName" type="String"/>
+        <values name="dosage" type="String"/>
+        <values name="administrationFrequency" type="String"/>
+        <values name="treatmentDuration" type="String"/>
+      </members>
+    </aggregates>
+    <domainServices name="SchedulingService">
+      <operations name="validateAppointmentSchedule" returnType="Boolean"/>
+    </domainServices>
+    <domainServices name="PrescriptionValidationService">
+      <operations name="validatePrescriptionStatus" returnType="Boolean"/>
+      <operations name="detectMedicationConflicts" returnType="Boolean"/>
+      <operations name="verifyPrescriptionEligibility" returnType="Boolean"/>
+    </domainServices>
+    <domainServices name="InsuranceVerificationService">
+      <operations name="verifyCoverage" returnType="Boolean"/>
+      <operations name="checkAuthorizationRequirements" returnType="Boolean"/>
+      <operations name="validateServiceEligibility" returnType="Boolean"/>
+    </domainServices>
+    <domainServices name="BillingService">
+      <operations name="calculateConsultationCost" returnType="Money"/>
+      <operations name="applyInsuranceDiscounts" returnType="Money"/>
+      <operations name="calculateAdditionalServices" returnType="Money"/>
+    </domainServices>
+    <events name="PatientRegistered"/>
+    <events name="AppointmentScheduled"/>
+    <events name="AppointmentRescheduled"/>
+    <events name="AppointmentCancelled"/>
+    <events name="ConsultationRecorded"/>
+    <events name="PrescriptionIssued"/>
+    <events name="InsuranceVerified"/>
+  </domain>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-AppointmentPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-PatientPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-PrescriptionPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-MedicalRecordPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:AdapterPortLink" name="EmailNotificationAdapter-NotificationPort" source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:AdapterPortLink" name="SMSServiceAdapter-NotificationPort" source="//@infrastructure/@adapters.2" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:AdapterPortLink" name="IdentityProviderAdapter-IdentityPort" source="//@infrastructure/@adapters.3" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="hmm:AdapterPortLink" name="InsuranceSystemAdapter-InsurancePort" source="//@infrastructure/@adapters.4" target="//@infrastructure/@ports.6"/>
+  <links xsi:type="hmm:AdapterPortLink" name="BillingPlatformAdapter-BillingPort" source="//@infrastructure/@adapters.5" target="//@infrastructure/@ports.7"/>
+  <links xsi:type="hmm:AdapterPortLink" name="EHRSystemAdapter-EHRPort" source="//@infrastructure/@adapters.6" target="//@infrastructure/@ports.8"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="NotificationProvider-EmailNotificationAdapter" source="//@externalSystems.0" target="//@infrastructure/@adapters.1"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="NotificationProvider-SMSServiceAdapter" source="//@externalSystems.0" target="//@infrastructure/@adapters.2"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="IdentityProvider-IdentityProviderAdapter" source="//@externalSystems.1" target="//@infrastructure/@adapters.3"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="InsuranceProviderSystem-InsuranceSystemAdapter" source="//@externalSystems.2" target="//@infrastructure/@adapters.4"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="BillingAndPaymentPlatform-BillingPlatformAdapter" source="//@externalSystems.3" target="//@infrastructure/@adapters.5"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="ElectronicHealthRecordSystem-EHRSystemAdapter" source="//@externalSystems.4" target="//@infrastructure/@adapters.6"/>
+  <links xsi:type="hmm:ServicePortLink" name="AppointmentManagementService-AppointmentPort" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:ServicePortLink" name="PatientManagementService-PatientPort" source="//@application/@services.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:ServicePortLink" name="PrescriptionManagementService-PrescriptionPort" source="//@application/@services.2" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:ServicePortLink" name="MedicalRecordService-MedicalRecordPort" source="//@application/@services.3" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="AppointmentManagementService-NotificationPort" source="//@application/@services.0" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="PatientManagementService-NotificationPort" source="//@application/@services.1" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="PrescriptionManagementService-NotificationPort" source="//@application/@services.2" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="MedicalRecordService-NotificationPort" source="//@application/@services.3" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="NotificationService-NotificationPort" source="//@application/@services.4" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="AppointmentManagementService-Appointment" source="//@application/@services.0" target="//@domain/@aggregates.2"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="PatientManagementService-Patient" source="//@application/@services.1" target="//@domain/@aggregates.0"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="PrescriptionManagementService-Prescription" source="//@application/@services.2" target="//@domain/@aggregates.4"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="MedicalRecordService-MedicalRecord" source="//@application/@services.3" target="//@domain/@aggregates.3"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="AppointmentManagementService-SchedulingService" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="PrescriptionManagementService-PrescriptionValidationService" source="//@application/@services.2" target="//@domain/@domainServices.1"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="PatientManagementService-InsuranceVerificationService" source="//@application/@services.1" target="//@domain/@domainServices.2"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="AppointmentManagementService-BillingService" source="//@application/@services.0" target="//@domain/@domainServices.3"/>
+  <externalSystems name="NotificationProvider"/>
+  <externalSystems name="IdentityProvider"/>
+  <externalSystems name="InsuranceProviderSystem"/>
+  <externalSystems name="BillingAndPaymentPlatform"/>
+  <externalSystems name="ElectronicHealthRecordSystem"/>
+</hmm:Hexagon>

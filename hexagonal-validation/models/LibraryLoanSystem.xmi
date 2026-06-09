@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hmm:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:hmm="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal hmm.ecore" name="LibraryLoanSystem">
+  <infrastructure name="Infrastructure">
+    <ports xsi:type="hmm:InboundPort" name="LoanRequestPort"/>
+    <ports xsi:type="hmm:InboundPort" name="BookQueryPort"/>
+    <ports xsi:type="hmm:InboundPort" name="ReturnBookPort"/>
+    <ports xsi:type="hmm:InboundPort" name="RenewLoanPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="LoanRepositoryPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="BookRepositoryPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="NotificationPort"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="LoanRestController"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="BookRestController"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="ReturnBookController"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="RenewLoanController"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="LoanORMRepository"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="BookORMRepository"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="EmailNotificationAdapter"/>
+  </infrastructure>
+  <application name="Application">
+    <services name="LoanService">
+      <useCases name="RequestLoan">
+        <input xsi:type="hmm:ValueObject" name="LoanRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="bookId" type="UUID"/>
+        <input xsi:type="hmm:Attribute" name="memberId" type="UUID"/>
+        <output xsi:type="hmm:ValueObject" name="LoanResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="hmm:Attribute" name="dueDate" type="DateTime"/>
+      </useCases>
+      <useCases name="ReturnBook">
+        <input xsi:type="hmm:ValueObject" name="ReturnBookRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="hmm:ValueObject" name="ReturnBookResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="status" type="LoanStatus"/>
+        <output xsi:type="hmm:Attribute" name="fine" type="Decimal"/>
+      </useCases>
+      <useCases name="RenewLoan">
+        <input xsi:type="hmm:ValueObject" name="RenewLoanRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="loanId" type="UUID"/>
+        <output xsi:type="hmm:ValueObject" name="RenewLoanResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="newDueDate" type="DateTime"/>
+      </useCases>
+      <useCases name="GetLoanHistory">
+        <input xsi:type="hmm:ValueObject" name="LoanHistoryRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="memberId" type="UUID"/>
+        <output xsi:type="hmm:ValueObject" name="LoanHistoryResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="loans" type="LoanList"/>
+      </useCases>
+    </services>
+    <services name="BookService">
+      <useCases name="SearchBook">
+        <input xsi:type="hmm:ValueObject" name="SearchBookRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="title" type="String"/>
+        <input xsi:type="hmm:Attribute" name="author" type="String"/>
+        <output xsi:type="hmm:ValueObject" name="SearchBookResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="books" type="BookList"/>
+      </useCases>
+      <useCases name="CheckAvailability">
+        <input xsi:type="hmm:ValueObject" name="AvailabilityRequestDTO"/>
+        <input xsi:type="hmm:Attribute" name="bookId" type="UUID"/>
+        <output xsi:type="hmm:ValueObject" name="AvailabilityResponseDTO"/>
+        <output xsi:type="hmm:Attribute" name="available" type="Boolean"/>
+        <output xsi:type="hmm:Attribute" name="copies" type="Integer"/>
+      </useCases>
+    </services>
+  </application>
+  <domain name="Domain">
+    <aggregates name="Loan">
+      <members xsi:type="hmm:Entity" name="LoanEntity">
+        <values name="loanId" type="UUID"/>
+        <values name="status" type="LoanStatus"/>
+        <values name="fine" type="Decimal"/>
+      </members>
+      <members xsi:type="hmm:Entity" name="MemberRef">
+        <values name="memberId" type="UUID"/>
+      </members>
+      <members xsi:type="hmm:ValueObject" name="LoanPeriod">
+        <values name="loanDate" type="DateTime"/>
+        <values name="dueDate" type="DateTime"/>
+        <values name="returnDate" type="DateTime"/>
+      </members>
+    </aggregates>
+    <aggregates name="Book">
+      <members xsi:type="hmm:Entity" name="BookEntity">
+        <values name="bookId" type="UUID"/>
+        <values name="title" type="String"/>
+        <values name="author" type="String"/>
+        <values name="isbn" type="String"/>
+        <values name="copies" type="Integer"/>
+      </members>
+      <members xsi:type="hmm:ValueObject" name="BookMetadata"/>
+    </aggregates>
+    <domainServices name="FineCalculatorService">
+      <operations name="calculateFine" returnType="Decimal"/>
+      <operations name="isOverdue" returnType="Boolean"/>
+    </domainServices>
+    <domainServices name="AvailabilityService">
+      <operations name="checkAvailability" returnType="Boolean"/>
+      <operations name="reserveCopy" returnType="void"/>
+    </domainServices>
+    <events name="LoanRequested">
+      <payload name="loanId" type="UUID"/>
+      <payload name="bookId" type="UUID"/>
+      <payload name="memberId" type="UUID"/>
+      <payload name="loanDate" type="DateTime"/>
+    </events>
+    <events name="BookReturned">
+      <payload name="loanId" type="UUID"/>
+      <payload name="returnDate" type="DateTime"/>
+      <payload name="fine" type="Decimal"/>
+    </events>
+    <events name="LoanOverdue">
+      <payload name="loanId" type="UUID"/>
+      <payload name="dueDate" type="DateTime"/>
+      <payload name="fine" type="Decimal"/>
+    </events>
+  </domain>
+  <links xsi:type="hmm:AdapterPortLink" name="LoanControllerToPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:AdapterPortLink" name="BookControllerToPort" source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:AdapterPortLink" name="ReturnControllerToPort" source="//@infrastructure/@adapters.2" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RenewControllerToPort" source="//@infrastructure/@adapters.3" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:AdapterPortLink" name="LoanRepoToPort" source="//@infrastructure/@adapters.4" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:AdapterPortLink" name="BookRepoToPort" source="//@infrastructure/@adapters.5" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="hmm:AdapterPortLink" name="EmailToPort" source="//@infrastructure/@adapters.6" target="//@infrastructure/@ports.6"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="RestClientToLoanController" source="//@externalSystems.0" target="//@infrastructure/@adapters.0"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="RestClientToBookController" source="//@externalSystems.0" target="//@infrastructure/@adapters.1"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="RestClientToReturnController" source="//@externalSystems.0" target="//@infrastructure/@adapters.2"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="RestClientToRenewController" source="//@externalSystems.0" target="//@infrastructure/@adapters.3"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="DBToLoanRepo" source="//@externalSystems.1" target="//@infrastructure/@adapters.4"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="DBToBookRepo" source="//@externalSystems.1" target="//@infrastructure/@adapters.5"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="SMTPToEmail" source="//@externalSystems.2" target="//@infrastructure/@adapters.6"/>
+  <links xsi:type="hmm:ServicePortLink" name="LoanServiceExposesInbound" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:ServicePortLink" name="LoanServiceExposesReturn" source="//@application/@services.0" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:ServicePortLink" name="LoanServiceExposesRenewal" source="//@application/@services.0" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="LoanServiceCallsRepo" source="//@application/@services.0" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="LoanServiceCallsNotification" source="//@application/@services.0" target="//@infrastructure/@ports.6"/>
+  <links xsi:type="hmm:ServicePortLink" name="BookServiceExposesQuery" source="//@application/@services.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:ServicePortLink" name="BookServiceCallsRepo" source="//@application/@services.1" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="LoanServiceToLoanAggregate" source="//@application/@services.0" target="//@domain/@aggregates.0"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="BookServiceToBookAggregate" source="//@application/@services.1" target="//@domain/@aggregates.1"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="LoanServiceToFineCalculator" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="BookServiceToAvailability" source="//@application/@services.1" target="//@domain/@domainServices.1"/>
+  <externalSystems name="RESTClient"/>
+  <externalSystems name="RelationalDB"/>
+  <externalSystems name="SMTPServer"/>
+</hmm:Hexagon>

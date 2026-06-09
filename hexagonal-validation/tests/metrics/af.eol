@@ -1,0 +1,106 @@
+// AF: Architectural Fidelity
+// Checks correspondence between HMM architecture and generated SMM code.
+// 5 rules, each weighted equally. Score = passed / total * 5.
+// Requires HMM model named "HMM" and SMM model named "SMM" loaded.
+
+var hmmHexagon = HMM!Hexagon.allInstances().first();
+var smmApp = SMM!Application.allInstances().first();
+var smmModule = smmApp.modules.first();
+
+("--- AF: Architectural Fidelity ---").println();
+
+var rulesPassed = 0;
+var totalRules = 5;
+
+// -- Rule 1: Controllers generated from InboundAdapters --
+var inboundAdapters = hmmHexagon.infrastructure.adapters
+    ->select(a | a.isTypeOf(HMM!InboundAdapter));
+var inboundAdapterCount = inboundAdapters.size();
+var controllerCount = smmModule.controllers.size();
+
+("Rule 1 - Controllers from InboundAdapters:").println();
+("  HMM InboundAdapters: " + inboundAdapterCount
+    + " (" + inboundAdapters->collect(a | a.name).concat(", ") + ")").println();
+("  SMM Controllers: " + controllerCount
+    + " (" + smmModule.controllers->collect(c | c.name).concat(", ") + ")").println();
+if (controllerCount >= inboundAdapterCount) {
+    rulesPassed := rulesPassed + 1;
+    ("  => PASS").println();
+} else {
+    ("  => FAIL (expected >= " + inboundAdapterCount + ")").println();
+}
+
+// -- Rule 2: Services generated from ApplicationServices --
+var appServiceCount = hmmHexagon.application.services.size();
+var serviceCount = smmModule.services.size();
+
+("Rule 2 - Services from ApplicationServices:").println();
+("  HMM ApplicationServices: " + appServiceCount
+    + " (" + hmmHexagon.application.services->collect(s | s.name).concat(", ") + ")").println();
+("  SMM Services: " + serviceCount
+    + " (" + smmModule.services->collect(s | s.name).concat(", ") + ")").println();
+if (serviceCount >= appServiceCount) {
+    rulesPassed := rulesPassed + 1;
+    ("  => PASS").println();
+} else {
+    ("  => FAIL (expected >= " + appServiceCount + ")").println();
+}
+
+// -- Rule 3: Repositories generated from OutboundPorts --
+var outboundPorts = hmmHexagon.infrastructure.ports
+    ->select(p | p.isTypeOf(HMM!OutboundPort));
+var outboundPortCount = outboundPorts.size();
+var repositoryCount = smmModule.repositories.size();
+
+("Rule 3 - Repositories from OutboundPorts:").println();
+("  HMM OutboundPorts: " + outboundPortCount
+    + " (" + outboundPorts->collect(p | p.name).concat(", ") + ")").println();
+("  SMM Repositories: " + repositoryCount
+    + " (" + smmModule.repositories->collect(r | r.name).concat(", ") + ")").println();
+if (repositoryCount >= outboundPortCount) {
+    rulesPassed := rulesPassed + 1;
+    ("  => PASS").println();
+} else {
+    ("  => FAIL (expected >= " + outboundPortCount + ")").println();
+}
+
+// -- Rule 4: Dependency inversion preserved --
+// SMM Services depend on Repository interfaces (not concrete implementations).
+// This is structurally enforced by the SMM metamodel (Service.requiredRepositories).
+// We verify that every SMM Service uses its requiredRepositories field.
+var diViolations = smmModule.services->select(s | s.requiredRepositories.size() = 0);
+("Rule 4 - Dependency inversion preserved:").println();
+("  Services with 0 Repository dependencies: " + diViolations.size()).println();
+if (diViolations.size() > 0) {
+    ("  Violations: " + diViolations->collect(s | s.name).concat(", ")).println();
+}
+if (diViolations.size() = 0) {
+    rulesPassed := rulesPassed + 1;
+    ("  => PASS").println();
+} else {
+    ("  => FAIL").println();
+}
+
+// -- Rule 5: Domain entities separated from infrastructure --
+// Entities should not appear in Controllers or be conflated with infrastructure.
+// We check that names of domain entities appear only in Module.entities, not elsewhere.
+var domainEntityNames = smmModule.entities->collect(e | e.name).asSet();
+var infrastructureNames = smmModule.controllers->collect(c | c.name).asSet();
+var sepHits = domainEntityNames->select(e | infrastructureNames->includes(e));
+("Rule 5 - Domain entities separated from infrastructure:").println();
+("  Domain entities leaking into Controller names: " + sepHits.size()).println();
+if (sepHits.size() > 0) {
+    ("  Violations: " + sepHits.concat(", ")).println();
+}
+if (sepHits.size() = 0) {
+    rulesPassed := rulesPassed + 1;
+    ("  => PASS").println();
+} else {
+    ("  => FAIL").println();
+}
+
+// -- Final Score --
+("---").println();
+("Rules passed: " + rulesPassed + "/" + totalRules).println();
+var afScore = (rulesPassed * 5) / totalRules;
+("AF Score: " + afScore + "/5").println();

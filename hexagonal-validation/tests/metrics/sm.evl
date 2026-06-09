@@ -1,0 +1,187 @@
+-- ============================================================
+-- SM: Structural Maintainability
+-- Measures: orphan elements, broken references, duplicated structures
+-- Score: 5 = none, 4 = minor, 3 = moderate, 2 = many, 1 = severe
+-- ============================================================
+
+-- ============ ORPHAN ELEMENTS ============
+
+context Entity {
+    constraint NoOrphanEntity {
+        check : Repository.allInstances()->exists(r | r.entityType = self)
+        message : "ORPHAN: Entity '" + self.name + "' is not referenced by any Repository. Unreferenced entities indicate incomplete persistence mapping."
+    }
+}
+
+context ValueObject {
+    constraint NoOrphanValueObject {
+        check : Entity.allInstances()->exists(e |
+            e.attributes->exists(a |
+                a.type.isDefined() and a.type.isTypeOf(CustomType)
+                and a.type.reference = self
+            )
+        )
+        message : "ORPHAN: ValueObject '" + self.name + "' is not referenced by any Entity attribute."
+    }
+}
+
+context Service {
+    constraint NoOrphanService {
+        check : Controller.allInstances()->exists(c | c.service = self)
+        message : "ORPHAN: Service '" + self.name + "' is not used by any Controller. A service with no controller exposing it is dead code."
+    }
+}
+
+context Repository {
+    constraint NoOrphanRepository {
+        check : Service.allInstances()->exists(s |
+            s.requiredRepositories->includes(self)
+        )
+        message : "ORPHAN: Repository '" + self.name + "' is not required by any Service."
+    }
+}
+
+context Dto {
+    constraint NoOrphanDto {
+        check :
+            Service.allInstances()->exists(s |
+                s.methods->exists(m |
+                    (m.returnType.isDefined() and m.returnType.isTypeOf(CustomType)
+                     and m.returnType.reference = self)
+                    or
+                    m.parameters->exists(p |
+                        p.type.isDefined() and p.type.isTypeOf(CustomType)
+                        and p.type.reference = self
+                    )
+                )
+            )
+            or
+            Controller.allInstances()->exists(c |
+                c.endpoints->exists(e |
+                    (e.returnType.isDefined() and e.returnType.isTypeOf(CustomType)
+                     and e.returnType.reference = self)
+                    or
+                    e.parameters->exists(p |
+                        p.type.isDefined() and p.type.isTypeOf(CustomType)
+                        and p.type.reference = self
+                    )
+                )
+            )
+        message : "ORPHAN: Dto '" + self.name + "' is not used by any Service or Controller endpoint."
+    }
+}
+
+-- ============ BROKEN REFERENCES ============
+
+context Repository {
+    constraint EntityTypeExists {
+        check : self.entityType.isDefined()
+        message : "BROKEN: Repository '" + self.name + "' has an undefined entityType reference."
+    }
+}
+
+context Service {
+    constraint RepositoriesExist {
+        check : self.requiredRepositories->forall(r | r.isDefined())
+        message : "BROKEN: Service '" + self.name + "' contains a null Repository reference."
+    }
+}
+
+context Controller {
+    constraint ServiceReferenceExists {
+        check : self.service.isDefined()
+        message : "BROKEN: Controller '" + self.name + "' has a null Service reference."
+    }
+}
+
+context CustomType {
+    constraint ReferenceExists {
+        check : self.reference.isDefined()
+        message : "BROKEN: CustomType has a null JavaClass reference."
+    }
+}
+
+context CollectionType {
+    constraint InnerTypeExists {
+        check : self.innerType.isDefined()
+        message : "BROKEN: CollectionType has a null innerType."
+    }
+}
+
+context Method {
+    constraint ReturnTypeExists {
+        check : self.returnType.isDefined()
+        message : "BROKEN: Method '" + self.name + "' has a null returnType."
+    }
+}
+
+context Parameter {
+    constraint TypeExists {
+        check : self.type.isDefined()
+        message : "BROKEN: Parameter '" + self.name + "' has a null type."
+    }
+}
+
+-- ============ DUPLICATED STRUCTURES ============
+
+context Module {
+    constraint UniqueEntityNames {
+        check : self.entities->collect(e | e.name).asSet().size() =
+                self.entities.size()
+        message : "DUPLICATE: Module has entities with duplicate names."
+    }
+
+    constraint UniqueValueObjectNames {
+        check : self.valueObjects->collect(vo | vo.name).asSet().size() =
+                self.valueObjects.size()
+        message : "DUPLICATE: Module has value objects with duplicate names."
+    }
+
+    constraint UniqueRepositoryNames {
+        check : self.repositories->collect(r | r.name).asSet().size() =
+                self.repositories.size()
+        message : "DUPLICATE: Module has repositories with duplicate names."
+    }
+
+    constraint UniqueServiceNames {
+        check : self.services->collect(s | s.name).asSet().size() =
+                self.services.size()
+        message : "DUPLICATE: Module has services with duplicate names."
+    }
+
+    constraint UniqueControllerNames {
+        check : self.controllers->collect(c | c.name).asSet().size() =
+                self.controllers.size()
+        message : "DUPLICATE: Module has controllers with duplicate names."
+    }
+
+    constraint UniqueDtoNames {
+        check : self.dtos->collect(d | d.name).asSet().size() =
+                self.dtos.size()
+        message : "DUPLICATE: Module has DTOs with duplicate names."
+    }
+}
+
+context Entity {
+    constraint UniqueAttributeNames {
+        check : self.attributes->collect(a | a.name).asSet().size() =
+                self.attributes.size()
+        message : "DUPLICATE: Entity '" + self.name + "' has attributes with duplicate names."
+    }
+}
+
+context Service {
+    constraint UniqueMethodNames {
+        check : self.methods->collect(m | m.name).asSet().size() =
+                self.methods.size()
+        message : "DUPLICATE: Service '" + self.name + "' has methods with duplicate names."
+    }
+}
+
+context Controller {
+    constraint UniqueEndpointPaths {
+        check : self.endpoints->collect(e | e.path).asSet().size() =
+                self.endpoints.size()
+        message : "DUPLICATE: Controller '" + self.name + "' has endpoints with duplicate paths."
+    }
+}

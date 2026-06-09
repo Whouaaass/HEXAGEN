@@ -1,0 +1,60 @@
+// FC: Functional Completeness
+// Counts generated elements and computes ratio against expected.
+// Expected count is configured per domain specification.
+// Score: 5 = >=95%, 4 = >=80%, 3 = >=60%, 2 = >=40%, 1 = <40%
+
+var totalGenerated = 0;
+var detail = new Map;
+
+for (app in Application.allInstances()) {
+    for (mod in app.modules) {
+        totalGenerated := totalGenerated + mod.entities.size();
+        totalGenerated := totalGenerated + mod.valueObjects.size();
+        totalGenerated := totalGenerated + mod.repositories.size();
+        totalGenerated := totalGenerated + mod.services.size();
+        totalGenerated := totalGenerated + mod.controllers.size();
+        totalGenerated := totalGenerated + mod.dtos.size();
+
+        detail.put("Entities", mod.entities.size());
+        detail.put("ValueObjects", mod.valueObjects.size());
+        detail.put("Repositories", mod.repositories.size());
+        detail.put("Services", mod.services.size());
+        detail.put("Controllers", mod.controllers.size());
+        detail.put("DTOs", mod.dtos.size());
+    }
+}
+
+// Configure these per domain specification:
+var expectedElements = 25;
+var expectedDetail = new Map;
+expectedDetail.put("Entities", 3);
+expectedDetail.put("ValueObjects", 2);
+expectedDetail.put("Repositories", 2);
+expectedDetail.put("Services", 2);
+expectedDetail.put("Controllers", 4);
+expectedDetail.put("DTOs", 12);
+
+("--- FC: Functional Completeness ---").println();
+("Generated element counts:").println();
+for (key in detail.keySet()) {
+    var exp = expectedDetail.get(key);
+    var gen = detail.get(key);
+    var pct = 0;
+    if (exp > 0) { pct := (gen * 100) / exp; }
+    ("  " + key + ": " + gen + "/" + exp + " (" + pct + "%)").println();
+}
+
+var overallRatio = 0;
+if (expectedElements > 0) {
+    overallRatio := totalGenerated.asReal() / expectedElements;
+}
+
+("Total: " + totalGenerated + "/" + expectedElements + " (" + (overallRatio * 100) + "%)").println();
+
+var score = 1;
+if (overallRatio >= 0.95) { score := 5; }
+else if (overallRatio >= 0.80) { score := 4; }
+else if (overallRatio >= 0.60) { score := 3; }
+else if (overallRatio >= 0.40) { score := 2; }
+
+("FC Score: " + score + "/5").println();

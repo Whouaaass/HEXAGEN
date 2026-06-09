@@ -1,0 +1,156 @@
+-- ============================================================
+-- SC: Syntactic Correctness
+-- Validates generated SMM model conforms to SMM metamodel.
+-- Score: 5 = 0 violations, 4 = 1-2, 3 = 3-5, 2 = 6-10, 1 = >10
+-- ============================================================
+
+context Application {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC001: Application must have a non-empty name."
+    }
+
+    constraint HasBasePackage {
+        check : self.basePackage.isDefined() and self.basePackage.trim().length() > 0
+        message : "SC002: Application must have a non-empty basePackage."
+    }
+
+    constraint HasModules {
+        check : self.modules.size() > 0
+        message : "SC003: Application must contain at least one Module."
+    }
+}
+
+context Module {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC004: Module must have a non-empty name."
+    }
+}
+
+context Entity {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC005: Entity must have a non-empty name."
+    }
+
+    constraint HasIdType {
+        check : self.idType.isDefined()
+        message : "SC006: Entity '" + self.name + "' must have a defined idType."
+    }
+}
+
+context ValueObject {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC007: ValueObject must have a non-empty name."
+    }
+}
+
+context Repository {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC008: Repository must have a non-empty name."
+    }
+
+    constraint HasEntityType {
+        check : self.entityType.isDefined()
+        message : "SC009: Repository '" + self.name + "' must reference an Entity via entityType."
+    }
+}
+
+context Service {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC010: Service must have a non-empty name."
+    }
+
+    constraint HasRequiredRepositories {
+        check : self.requiredRepositories.size() > 0
+        message : "SC011: Service '" + self.name + "' must reference at least one Repository."
+    }
+}
+
+context Controller {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC012: Controller must have a non-empty name."
+    }
+
+    constraint HasBasePath {
+        check : self.basePath.isDefined() and self.basePath.trim().length() > 0
+        message : "SC013: Controller '" + self.name + "' must have a non-empty basePath."
+    }
+
+    constraint HasService {
+        check : self.service.isDefined()
+        message : "SC014: Controller '" + self.name + "' must reference a Service."
+    }
+}
+
+context Endpoint {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC015: Endpoint must have a non-empty name."
+    }
+
+    constraint HasPath {
+        check : self.path.isDefined() and self.path.trim().length() > 0
+        message : "SC016: Endpoint '" + self.name + "' must have a non-empty path."
+    }
+
+    constraint HasHttpMethod {
+        check : self.httpMethod.isDefined()
+        message : "SC017: Endpoint '" + self.name + "' must have a defined httpMethod."
+    }
+}
+
+context Attribute {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC018: Attribute must have a non-empty name."
+    }
+
+    constraint HasType {
+        check : self.type.isDefined()
+        message : "SC019: Attribute '" + self.name + "' must have a defined type."
+    }
+}
+
+context Parameter {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC020: Parameter must have a non-empty name."
+    }
+
+    constraint HasType {
+        check : self.type.isDefined()
+        message : "SC021: Parameter '" + self.name + "' must have a defined type."
+    }
+}
+
+context Dto {
+    constraint HasName {
+        check : self.name.isDefined() and self.name.trim().length() > 0
+        message : "SC022: Dto must have a non-empty name."
+    }
+}
+
+context CollectionType {
+    constraint HasInnerType {
+        check : self.innerType.isDefined()
+        message : "SC023: CollectionType must have a defined innerType."
+    }
+}
+
+context MapType {
+    constraint HasKeyType {
+        check : self.keyType.isDefined()
+        message : "SC024: MapType must have a defined keyType."
+    }
+
+    constraint HasValueType {
+        check : self.valueType.isDefined()
+        message : "SC025: MapType must have a defined valueType."
+    }
+}

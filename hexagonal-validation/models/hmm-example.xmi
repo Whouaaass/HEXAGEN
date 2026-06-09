@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal hexagonalpro.ecore" name="Example">
+  <infrastructure>
+    <ports xsi:type="p:InboundPort"/>
+    <ports xsi:type="p:OutboundPort"/>
+    <adapters xsi:type="p:InboundAdapter"/>
+    <adapters xsi:type="p:OutboundAdapter"/>
+  </infrastructure>
+  <application>
+    <services/>
+  </application>
+  <domain>
+    <aggregates>
+      <members xsi:type="p:Entity">
+        <values/>
+        <values/>
+      </members>
+      <members xsi:type="p:ValueObject">
+        <values/>
+        <values/>
+      </members>
+    </aggregates>
+    <domainServices/>
+    <events/>
+  </domain>
+  <links xsi:type="p:AdapterPortLink"/>
+</p:Hexagon>
