@@ -1,151 +1,127 @@
 @namespace(uri="smm", prefix="smm")
 package smm;
 
-// ==========================================
-// ENUMS
-// ==========================================
 enum HttpMethod {
-  GET; POST; PUT; DELETE;
+	GET = 0;
+	POST = 1;
+	PUT = 2;
+	DELETE = 3;
+	PATCH = 4;
 }
 
 enum ParamKind {
-  PATH; QUERY; BODY;
+	PATH = 0;
+	QUERY = 1;
+	BODY = 2;
 }
 
 enum PrimitiveKind {
-  STRING; INTEGER; LONG; BOOLEAN; DOUBLE; DATE; UUID;
+	STRING = 0;
+	INTEGER = 1;
+	LONG = 2;
+	BOOLEAN = 3;
+	DOUBLE = 4;
+	DATE = 5;
+	UUID = 6;
 }
 
 enum CollectionKind {
-  LIST; SET;
+	LIST = 0;
+	SET = 1;
 }
 
-// ==========================================
-// SISTEMA DE TIPADO EXHAUSTIVO
-// ==========================================
-abstract class Type {}
+abstract class Type {
+}
 
 class PrimitiveType extends Type {
-  attr PrimitiveKind kind;
+	attr PrimitiveKind kind;
 }
 
 class CustomType extends Type {
-  ref JavaClass reference;
+	ref JavaClass reference;
 }
 
 class CollectionType extends Type {
-  attr CollectionKind collection;
-  val Type innerType;
+	attr CollectionKind collection;
+	val Type innerType;
 }
 
 class MapType extends Type {
-  val Type keyType;
-  val Type valueType;
+	val Type keyType;
+	val Type valueType;
 }
 
-// ==========================================
-// ESTRUCTURA HEXAGONAL Y APLICACIÓN
-// ==========================================
 class Application {
-  attr String name;
-  attr String basePackage;
-  attr String javaVersion;
-  attr String serverPort;
-  val BoundedContext[*] contexts;
+	attr String name;
+	attr String basePackage;
+	attr String javaVersion;
+	attr String serverPort;
+	val Module[*] modules;
 }
 
-class BoundedContext {
-  attr String name;
-  val DomainLayer domain;
-  val ApplicationLayer application;
-  val InfrastructureLayer infrastructure;
+class Module {
+	attr String name;
+	val Entity[*] entities;
+	val ValueObject[*] valueObjects;
+	val Repository[*] repositories;
+	val Service[*] services;
+	val Controller[*] controllers;
+	val Dto[*] dtos;
 }
 
-class DomainLayer {
-  val Entity[*] entities;
-  val ValueObject[*] valueObjects;
-  val RepositoryPort[*] repositoryPorts;
-}
-
-class ApplicationLayer {
-  val Service[*] services;
-}
-
-class InfrastructureLayer {
-  val Controller[*] controllers;
-  val RepositoryAdapter[*] repositoryAdapters;
-  val Dto[*] dtos;
-}
-
-// ==========================================
-// ELEMENTOS BASE DE JAVA
-// ==========================================
 abstract class NamedElement {
-  attr String name;
+	attr String name;
 }
 
 abstract class JavaClass extends NamedElement {
-  val Attribute[*] attributes;
-  val Method[*] methods;
+	val Attribute[*] attributes;
+	val Method[*] methods;
 }
 
-// ==========================================
-// COMPONENTES DE DOMINIO
-// ==========================================
 class Entity extends JavaClass {
-  val Type idType;
+	val Type idType;
 }
 
-class ValueObject extends JavaClass {}
-
-class RepositoryPort extends NamedElement {
-  ref Entity entityType;
-  val Type idType;
-  val Method[*] methods;
+class ValueObject extends JavaClass {
 }
 
-// ==========================================
-// COMPONENTES DE APLICACIÓN
-// ==========================================
+class Repository extends NamedElement {
+	ref Entity entityType;
+	val Type idType;
+	val Method[*] methods;
+}
+
 class Service extends JavaClass {
-  ref RepositoryPort[*] requiredPorts;
+	ref Repository[*] requiredRepositories;
 }
 
-// ==========================================
-// COMPONENTES DE INFRAESTRUCTURA
-// ==========================================
 class Controller extends JavaClass {
-  attr String basePath;
-  ref Service service;
-  val Endpoint[*] endpoints;
+	attr String basePath;
+	ref Service service;
+	val Endpoint[*] endpoints;
 }
 
-class RepositoryAdapter extends JavaClass {
-  ref RepositoryPort implementsPort;
+class Dto extends JavaClass {
 }
 
-class Dto extends JavaClass {}
-
-// ==========================================
-// MIEMBROS DE CLASE (Atributos, Métodos)
-// ==========================================
 class Attribute extends NamedElement {
-  val Type type;
-  attr boolean isId;
-  attr boolean isNullable;
+	val Type type;
+	attr boolean isId;
+	attr boolean isNullable;
 }
 
 class Method extends NamedElement {
-  val Type returnType;
-  val Parameter[*] parameters;
+	val Type returnType;
+	val Parameter[*] parameters;
 }
 
 class Endpoint extends Method {
-  attr HttpMethod httpMethod;
-  attr String path;
+	attr HttpMethod httpMethod;
+	attr String path;
 }
 
 class Parameter extends NamedElement {
-  val Type type;
-  attr ParamKind kind;
+	val Type type;
+	attr ParamKind kind;
 }
+

@@ -1,0 +1,78 @@
+<project name="hexagen-metrics" default="evaluate-all" basedir="..">
+
+    <description>
+        HEXAGEN Metrics Evaluation — ANT build file.
+        Run via: ant -f tests/build.xml
+        Requires Epsilon ANT tasks on classpath (epsilon-ant.jar in $ECLIPSE_HOME/plugins/).
+    </description>
+
+    <!-- Configure these paths for your environment -->
+    <property name="smm.model" value="models/LibraryLoanSystem-smm-pure.xmi"/>
+    <property name="smm.metamodel" value="models/smm.ecore"/>
+    <property name="hmm.model" value="models/LibraryLoanSystem.xmi"/>
+    <property name="hmm.metamodel" value="models/hmm.ecore"/>
+
+    <!-- ========================================================== -->
+    <!-- Target: sc — Syntactic Correctness                          -->
+    <!-- ========================================================== -->
+    <target name="sc">
+        <epsilon.evl src="tests/metrics/sc.evl">
+            <model name="SMM" uri="smm" file="${smm.model}" read="true" store="false">
+                <metamodel file="${smm.metamodel}"/>
+            </model>
+        </epsilon.evl>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Target: sm — Structural Maintainability                    -->
+    <!-- ========================================================== -->
+    <target name="sm">
+        <epsilon.evl src="tests/metrics/sm.evl">
+            <model name="SMM" uri="smm" file="${smm.model}" read="true" store="false">
+                <metamodel file="${smm.metamodel}"/>
+            </model>
+        </epsilon.evl>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Target: fc — Functional Completeness                       -->
+    <!-- ========================================================== -->
+    <target name="fc">
+        <epsilon.eol src="tests/metrics/fc.eol">
+            <model name="SMM" uri="smm" file="${smm.model}" read="true" store="false">
+                <metamodel file="${smm.metamodel}"/>
+            </model>
+        </epsilon.eol>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Target: af — Architectural Fidelity (requires HMM + SMM)   -->
+    <!-- ========================================================== -->
+    <target name="af">
+        <epsilon.eol src="tests/metrics/af.eol">
+            <model name="HMM" uri="http://co.edu.unicauca.hexagen.hexagonal"
+                   file="${hmm.model}" read="true" store="false">
+                <metamodel file="${hmm.metamodel}"/>
+            </model>
+            <model name="SMM" uri="smm" file="${smm.model}" read="true" store="false">
+                <metamodel file="${smm.metamodel}"/>
+            </model>
+        </epsilon.eol>
+    </target>
+
+    <!-- ========================================================== -->
+    <!-- Target: evaluate-all — Aggregate all 4 metrics              -->
+    <!-- ========================================================== -->
+    <target name="evaluate-all" depends="sc, sm, fc, af">
+        <epsilon.eol src="tests/metrics/evaluate-all.eol">
+            <model name="HMM" uri="http://co.edu.unicauca.hexagen.hexagonal"
+                   file="${hmm.model}" read="true" store="false">
+                <metamodel file="${hmm.metamodel}"/>
+            </model>
+            <model name="SMM" uri="smm" file="${smm.model}" read="true" store="false">
+                <metamodel file="${smm.metamodel}"/>
+            </model>
+        </epsilon.eol>
+    </target>
+
+</project>

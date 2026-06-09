@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hmm:Hexagon xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:hmm="http://co.edu.unicauca.hexagen.hexagonal" xsi:schemaLocation="http://co.edu.unicauca.hexagen.hexagonal hexagonalpro.ecore" name="SportsComplexReservationSystem">
+  <infrastructure name="InfrastructureLayer">
+    <ports xsi:type="hmm:InboundPort" name="ReservationPort"/>
+    <ports xsi:type="hmm:InboundPort" name="AvailabilityPort"/>
+    <ports xsi:type="hmm:InboundPort" name="FacilityPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="NotificationPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="PaymentPort"/>
+    <ports xsi:type="hmm:OutboundPort" name="IdentityPort"/>
+    <adapters xsi:type="hmm:InboundAdapter" name="RESTController"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="EmailNotificationAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="SMSNotificationAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="PushNotificationAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="PaymentGatewayAdapter"/>
+    <adapters xsi:type="hmm:OutboundAdapter" name="IdentityProviderAdapter"/>
+  </infrastructure>
+  <application name="ApplicationLayer">
+    <services name="ReservationService">
+      <useCases name="CreateReservation"/>
+      <useCases name="CancelReservation"/>
+      <useCases name="ApproveReservation"/>
+      <useCases name="CheckReservationStatus"/>
+    </services>
+    <services name="AvailabilityService">
+      <useCases name="SearchAvailableFacilities"/>
+      <useCases name="VerifyFacilityAvailability"/>
+      <useCases name="DetectSchedulingConflicts"/>
+      <useCases name="RetrieveAvailableTimeSlots"/>
+    </services>
+    <services name="FacilityManagementService">
+      <useCases name="CreateFacility"/>
+      <useCases name="UpdateFacilityInfo"/>
+      <useCases name="ManageFacilityAvailability"/>
+      <useCases name="ViewReservationSchedule"/>
+    </services>
+    <services name="NotificationService">
+      <useCases name="SendNotification"/>
+    </services>
+  </application>
+  <domain name="DomainCore">
+    <aggregates name="SportsComplex">
+      <members xsi:type="hmm:Attribute" name="complexId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="name" type="String"/>
+      <members xsi:type="hmm:Attribute" name="description" type="String"/>
+      <members xsi:type="hmm:Attribute" name="location" type="String"/>
+      <members xsi:type="hmm:ValueObject" name="ContactInformation">
+        <values name="email" type="String"/>
+        <values name="phoneNumber" type="String"/>
+      </members>
+      <members xsi:type="hmm:ValueObject" name="FacilityLocation">
+        <values name="building" type="String"/>
+        <values name="area" type="String"/>
+        <values name="zone" type="String"/>
+        <values name="additionalDirections" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="SportsFacility">
+      <members xsi:type="hmm:Attribute" name="facilityId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="name" type="String"/>
+      <members xsi:type="hmm:Attribute" name="facilityType" type="String"/>
+      <members xsi:type="hmm:Attribute" name="capacity" type="Integer"/>
+      <members xsi:type="hmm:Attribute" name="availabilityStatus" type="String"/>
+    </aggregates>
+    <aggregates name="User">
+      <members xsi:type="hmm:Attribute" name="userId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="fullName" type="String"/>
+      <members xsi:type="hmm:Attribute" name="emailAddress" type="String"/>
+      <members xsi:type="hmm:Attribute" name="phoneNumber" type="String"/>
+      <members xsi:type="hmm:ValueObject" name="ContactInformation">
+        <values name="email" type="String"/>
+        <values name="phoneNumber" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="Administrator">
+      <members xsi:type="hmm:Attribute" name="adminId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="name" type="String"/>
+      <members xsi:type="hmm:ValueObject" name="ContactInformation">
+        <values name="email" type="String"/>
+        <values name="phoneNumber" type="String"/>
+      </members>
+    </aggregates>
+    <aggregates name="Reservation">
+      <members xsi:type="hmm:Attribute" name="reservationId" type="String"/>
+      <members xsi:type="hmm:Attribute" name="status" type="ReservationStatus"/>
+      <members xsi:type="hmm:Attribute" name="creationDate" type="DateTime"/>
+      <members xsi:type="hmm:Attribute" name="scheduledDate" type="Date"/>
+      <members xsi:type="hmm:ValueObject" name="TimeSlot">
+        <values name="startDateTime" type="DateTime"/>
+        <values name="endDateTime" type="DateTime"/>
+      </members>
+    </aggregates>
+    <domainServices name="SchedulingService">
+      <operations name="validateNoOverlap" returnType="Boolean"/>
+      <operations name="validateNotBlocked" returnType="Boolean"/>
+      <operations name="validateValidTime" returnType="Boolean"/>
+    </domainServices>
+    <domainServices name="PricingService">
+      <operations name="calculateCost" returnType="Money"/>
+      <operations name="applyDiscounts" returnType="Money"/>
+      <operations name="calculatePeakPrice" returnType="Money"/>
+    </domainServices>
+    <domainServices name="MembershipValidationService">
+      <operations name="validateMembership" returnType="Boolean"/>
+    </domainServices>
+    <events name="ReservationCreated" occurredOn="occurredOn">
+      <payload name="reservationId" type="String"/>
+      <payload name="userId" type="String"/>
+      <payload name="facilityId" type="String"/>
+      <payload name="createdAt" type="DateTime"/>
+    </events>
+    <events name="ReservationApproved" occurredOn="occurredOn">
+      <payload name="reservationId" type="String"/>
+      <payload name="adminId" type="String"/>
+      <payload name="approvedAt" type="DateTime"/>
+    </events>
+    <events name="ReservationCancelled" occurredOn="occurredOn">
+      <payload name="reservationId" type="String"/>
+      <payload name="reason" type="String"/>
+      <payload name="cancelledAt" type="DateTime"/>
+    </events>
+    <events name="FacilityAvailabilityUpdated" occurredOn="occurredOn">
+      <payload name="facilityId" type="String"/>
+      <payload name="newStatus" type="String"/>
+      <payload name="updatedAt" type="DateTime"/>
+    </events>
+    <events name="ReservationConflictDetected" occurredOn="occurredOn">
+      <payload name="facilityId" type="String"/>
+      <payload name="requestedStart" type="DateTime"/>
+      <payload name="requestedEnd" type="DateTime"/>
+      <payload name="conflictingReservationId" type="String"/>
+    </events>
+  </domain>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-ReservationPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-AvailabilityPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:AdapterPortLink" name="RESTController-FacilityPort" source="//@infrastructure/@adapters.0" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:AdapterPortLink" name="EmailNotificationAdapter-NotificationPort" source="//@infrastructure/@adapters.1" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:AdapterPortLink" name="SMSNotificationAdapter-NotificationPort" source="//@infrastructure/@adapters.2" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:AdapterPortLink" name="PushNotificationAdapter-NotificationPort" source="//@infrastructure/@adapters.3" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:AdapterPortLink" name="PaymentGatewayAdapter-PaymentPort" source="//@infrastructure/@adapters.4" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:AdapterPortLink" name="IdentityProviderAdapter-IdentityPort" source="//@infrastructure/@adapters.5" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="NotificationProvider-EmailNotificationAdapter" source="//@externalSystems.0" target="//@infrastructure/@adapters.1"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="NotificationProvider-SMSNotificationAdapter" source="//@externalSystems.0" target="//@infrastructure/@adapters.2"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="NotificationProvider-PushNotificationAdapter" source="//@externalSystems.0" target="//@infrastructure/@adapters.3"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="PaymentGateway-PaymentGatewayAdapter" source="//@externalSystems.1" target="//@infrastructure/@adapters.4"/>
+  <links xsi:type="hmm:ExternalSystemLink" name="IdentityProvider-IdentityProviderAdapter" source="//@externalSystems.2" target="//@infrastructure/@adapters.5"/>
+  <links xsi:type="hmm:ServicePortLink" name="ReservationService-ReservationPort" source="//@application/@services.0" target="//@infrastructure/@ports.0"/>
+  <links xsi:type="hmm:ServicePortLink" name="AvailabilityService-AvailabilityPort" source="//@application/@services.1" target="//@infrastructure/@ports.1"/>
+  <links xsi:type="hmm:ServicePortLink" name="FacilityManagementService-FacilityPort" source="//@application/@services.2" target="//@infrastructure/@ports.2"/>
+  <links xsi:type="hmm:ServicePortLink" name="ReservationService-NotificationPort" source="//@application/@services.0" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="AvailabilityService-NotificationPort" source="//@application/@services.1" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="FacilityManagementService-NotificationPort" source="//@application/@services.2" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="NotificationService-NotificationPort" source="//@application/@services.3" target="//@infrastructure/@ports.3"/>
+  <links xsi:type="hmm:ServicePortLink" name="ReservationService-PaymentPort" source="//@application/@services.0" target="//@infrastructure/@ports.4"/>
+  <links xsi:type="hmm:ServicePortLink" name="ReservationService-IdentityPort" source="//@application/@services.0" target="//@infrastructure/@ports.5"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="ReservationService-Reservation" source="//@application/@services.0" target="//@domain/@aggregates.4"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="AvailabilityService-SportsFacility" source="//@application/@services.1" target="//@domain/@aggregates.1"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="FacilityManagementService-SportsComplex" source="//@application/@services.2" target="//@domain/@aggregates.0"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="FacilityManagementService-SportsFacility" source="//@application/@services.2" target="//@domain/@aggregates.1"/>
+  <links xsi:type="hmm:ServiceAggregateLink" name="ReservationService-User" source="//@application/@services.0" target="//@domain/@aggregates.2"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="ReservationService-SchedulingService" source="//@application/@services.0" target="//@domain/@domainServices.0"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="ReservationService-PricingService" source="//@application/@services.0" target="//@domain/@domainServices.1"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="ReservationService-MembershipValidationService" source="//@application/@services.0" target="//@domain/@domainServices.2"/>
+  <links xsi:type="hmm:ServiceDomainServiceLink" name="AvailabilityService-SchedulingService" source="//@application/@services.1" target="//@domain/@domainServices.0"/>
+  <externalSystems name="NotificationProvider"/>
+  <externalSystems name="PaymentGateway"/>
+  <externalSystems name="IdentityProvider"/>
+</hmm:Hexagon>

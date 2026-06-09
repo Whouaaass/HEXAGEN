@@ -1,5 +1,5 @@
-@namespace(uri="http://co.edu.unicauca.hexagen.hexagonal", prefix="p")
-package hexagonal_ddd;
+@namespace(uri="http://co.edu.unicauca.hexagen.hexagonal", prefix="hmm")
+package hmm;
 
 class Hexagon {
 	attr String name;

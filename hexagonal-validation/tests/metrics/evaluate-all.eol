@@ -1,0 +1,431 @@
+// evaluate-all.eol
+// Master scoring script that aggregates SC, AF, FC, SM metrics.
+// Requires both HMM and SMM models loaded.
+
+("╔═══════════════════════════════════════════════════════════").println();
+("║  HEXAGEN — Model Quality Evaluation Report              ").println();
+("╚═══════════════════════════════════════════════════════════").println();
+("").println();
+
+// ============================================================
+// Detailed Violation Log — matches sc.evl + sm.evl messages
+// ============================================================
+
+var errorList = new Native("java.util.ArrayList");
+var scViolations = 0;
+var scOrphan = 0;
+var scBroken = 0;
+var scDuplicate = 0;
+
+("--- Detailed Error Log ---").println();
+("").println();
+
+// ============ SC: Syntactic Correctness (25 constraints) ============
+
+for (app in SMM!Application.allInstances()) {
+    if (not (app.name.isDefined() and app.name.trim().length() > 0)) {
+        errorList.add("SC001: Application must have a non-empty name.");
+    }
+    if (not (app.basePackage.isDefined() and app.basePackage.trim().length() > 0)) {
+        errorList.add("SC002: Application must have a non-empty basePackage.");
+    }
+    if (app.modules.size() <= 0) {
+        errorList.add("SC003: Application must contain at least one Module.");
+    }
+}
+for (mod in SMM!Module.allInstances()) {
+    if (not (mod.name.isDefined() and mod.name.trim().length() > 0)) {
+        errorList.add("SC004: Module must have a non-empty name.");
+    }
+}
+for (ent in SMM!Entity.allInstances()) {
+    if (not (ent.name.isDefined() and ent.name.trim().length() > 0)) {
+        errorList.add("SC005: Entity must have a non-empty name.");
+    }
+    if (not ent.idType.isDefined()) {
+        errorList.add("SC006: Entity '" + ent.name + "' must have a defined idType.");
+    }
+}
+for (vo in SMM!ValueObject.allInstances()) {
+    if (not (vo.name.isDefined() and vo.name.trim().length() > 0)) {
+        errorList.add("SC007: ValueObject must have a non-empty name.");
+    }
+}
+for (repo in SMM!Repository.allInstances()) {
+    if (not (repo.name.isDefined() and repo.name.trim().length() > 0)) {
+        errorList.add("SC008: Repository must have a non-empty name.");
+    }
+    if (not repo.entityType.isDefined()) {
+        errorList.add("SC009: Repository '" + repo.name + "' must reference an Entity via entityType.");
+    }
+}
+for (svc in SMM!Service.allInstances()) {
+    if (not (svc.name.isDefined() and svc.name.trim().length() > 0)) {
+        errorList.add("SC010: Service must have a non-empty name.");
+    }
+    if (svc.requiredRepositories.size() <= 0) {
+        errorList.add("SC011: Service '" + svc.name + "' must reference at least one Repository.");
+    }
+}
+for (ctrl in SMM!Controller.allInstances()) {
+    if (not (ctrl.name.isDefined() and ctrl.name.trim().length() > 0)) {
+        errorList.add("SC012: Controller must have a non-empty name.");
+    }
+    if (not (ctrl.basePath.isDefined() and ctrl.basePath.trim().length() > 0)) {
+        errorList.add("SC013: Controller '" + ctrl.name + "' must have a non-empty basePath.");
+    }
+    if (not ctrl.service.isDefined()) {
+        errorList.add("SC014: Controller '" + ctrl.name + "' must reference a Service.");
+    }
+}
+for (ep in SMM!Endpoint.allInstances()) {
+    if (not (ep.name.isDefined() and ep.name.trim().length() > 0)) {
+        errorList.add("SC015: Endpoint must have a non-empty name.");
+    }
+    if (not (ep.path.isDefined() and ep.path.trim().length() > 0)) {
+        errorList.add("SC016: Endpoint '" + ep.name + "' must have a non-empty path.");
+    }
+    if (not ep.httpMethod.isDefined()) {
+        errorList.add("SC017: Endpoint '" + ep.name + "' must have a defined httpMethod.");
+    }
+}
+for (attr in SMM!Attribute.allInstances()) {
+    if (not (attr.name.isDefined() and attr.name.trim().length() > 0)) {
+        errorList.add("SC018: Attribute must have a non-empty name.");
+    }
+    if (not attr.type.isDefined()) {
+        errorList.add("SC019: Attribute '" + attr.name + "' must have a defined type.");
+    }
+}
+for (param in SMM!Parameter.allInstances()) {
+    if (not (param.name.isDefined() and param.name.trim().length() > 0)) {
+        errorList.add("SC020: Parameter must have a non-empty name.");
+    }
+    if (not param.type.isDefined()) {
+        errorList.add("SC021: Parameter '" + param.name + "' must have a defined type.");
+    }
+}
+for (dto in SMM!Dto.allInstances()) {
+    if (not (dto.name.isDefined() and dto.name.trim().length() > 0)) {
+        errorList.add("SC022: Dto must have a non-empty name.");
+    }
+}
+for (ct in SMM!CollectionType.allInstances()) {
+    if (not ct.innerType.isDefined()) {
+        errorList.add("SC023: CollectionType must have a defined innerType.");
+    }
+}
+for (mt in SMM!MapType.allInstances()) {
+    if (not mt.keyType.isDefined()) {
+        errorList.add("SC024: MapType must have a defined keyType.");
+    }
+    if (not mt.valueType.isDefined()) {
+        errorList.add("SC025: MapType must have a defined valueType.");
+    }
+}
+
+// ============ SM: Orphan Elements ============
+
+for (e in SMM!Entity.allInstances()) {
+    if (not SMM!Repository.allInstances()->exists(r | r.entityType = e)) {
+        errorList.add("ORPHAN: Entity '" + e.name + "' is not referenced by any Repository. Unreferenced entities indicate incomplete persistence mapping.");
+        scOrphan := scOrphan + 1;
+    }
+}
+for (vo in SMM!ValueObject.allInstances()) {
+    var refd = SMM!Entity.allInstances()->exists(e |
+        e.attributes->exists(a |
+            a.type.isDefined() and a.type.isTypeOf(SMM!CustomType)
+            and a.type.reference = vo
+        )
+    );
+    if (not refd) {
+        errorList.add("ORPHAN: ValueObject '" + vo.name + "' is not referenced by any Entity attribute.");
+        scOrphan := scOrphan + 1;
+    }
+}
+for (svc in SMM!Service.allInstances()) {
+    if (not SMM!Controller.allInstances()->exists(c | c.service = svc)) {
+        errorList.add("ORPHAN: Service '" + svc.name + "' is not used by any Controller. A service with no controller exposing it is dead code.");
+        scOrphan := scOrphan + 1;
+    }
+}
+for (r in SMM!Repository.allInstances()) {
+    if (not SMM!Service.allInstances()->exists(s |
+        s.requiredRepositories->includes(r)
+    )) {
+        errorList.add("ORPHAN: Repository '" + r.name + "' is not required by any Service.");
+        scOrphan := scOrphan + 1;
+    }
+}
+for (d in SMM!Dto.allInstances()) {
+    var used = SMM!Service.allInstances()->exists(s |
+        s.methods->exists(m |
+            (m.returnType.isDefined() and m.returnType.isTypeOf(SMM!CustomType)
+             and m.returnType.reference = d)
+            or
+            m.parameters->exists(p |
+                p.type.isDefined() and p.type.isTypeOf(SMM!CustomType)
+                and p.type.reference = d
+            )
+        )
+    )
+    or
+    SMM!Controller.allInstances()->exists(c |
+        c.endpoints->exists(e |
+            (e.returnType.isDefined() and e.returnType.isTypeOf(SMM!CustomType)
+             and e.returnType.reference = d)
+            or
+            e.parameters->exists(p |
+                p.type.isDefined() and p.type.isTypeOf(SMM!CustomType)
+                and p.type.reference = d
+            )
+        )
+    );
+    if (not used) {
+        errorList.add("ORPHAN: Dto '" + d.name + "' is not used by any Service or Controller endpoint.");
+        scOrphan := scOrphan + 1;
+    }
+}
+
+// ============ SM: Broken References ============
+
+for (r in SMM!Repository.allInstances()) {
+    if (not r.entityType.isDefined()) {
+        errorList.add("BROKEN: Repository '" + r.name + "' has an undefined entityType reference.");
+        scBroken := scBroken + 1;
+    }
+}
+for (svc in SMM!Service.allInstances()) {
+    if (not svc.requiredRepositories->forAll(rr | rr.isDefined())) {
+        errorList.add("BROKEN: Service '" + svc.name + "' contains a null Repository reference.");
+        scBroken := scBroken + 1;
+    }
+}
+for (ctrl in SMM!Controller.allInstances()) {
+    if (not ctrl.service.isDefined()) {
+        errorList.add("BROKEN: Controller '" + ctrl.name + "' has a null Service reference.");
+        scBroken := scBroken + 1;
+    }
+}
+for (ct in SMM!CustomType.allInstances()) {
+    if (not ct.reference.isDefined()) {
+        errorList.add("BROKEN: CustomType has a null JavaClass reference.");
+        scBroken := scBroken + 1;
+    }
+}
+for (ct in SMM!CollectionType.allInstances()) {
+    if (not ct.innerType.isDefined()) {
+        errorList.add("BROKEN: CollectionType has a null innerType.");
+        scBroken := scBroken + 1;
+    }
+}
+for (m in SMM!Method.allInstances()) {
+    if (not m.returnType.isDefined()) {
+        errorList.add("BROKEN: Method '" + m.name + "' has a null returnType.");
+        scBroken := scBroken + 1;
+    }
+}
+for (p in SMM!Parameter.allInstances()) {
+    if (not p.type.isDefined()) {
+        errorList.add("BROKEN: Parameter '" + p.name + "' has a null type.");
+        scBroken := scBroken + 1;
+    }
+}
+
+// ============ SM: Duplicated Structures ============
+
+for (mod in SMM!Module.allInstances()) {
+    if (mod.entities->collect(e | e.name).asSet().size() <> mod.entities.size()) {
+        errorList.add("DUPLICATE: Module has entities with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+    if (mod.valueObjects->collect(vo | vo.name).asSet().size() <> mod.valueObjects.size()) {
+        errorList.add("DUPLICATE: Module has value objects with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+    if (mod.repositories->collect(r | r.name).asSet().size() <> mod.repositories.size()) {
+        errorList.add("DUPLICATE: Module has repositories with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+    if (mod.services->collect(s | s.name).asSet().size() <> mod.services.size()) {
+        errorList.add("DUPLICATE: Module has services with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+    if (mod.controllers->collect(c | c.name).asSet().size() <> mod.controllers.size()) {
+        errorList.add("DUPLICATE: Module has controllers with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+    if (mod.dtos->collect(d | d.name).asSet().size() <> mod.dtos.size()) {
+        errorList.add("DUPLICATE: Module has DTOs with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+}
+for (ent in SMM!Entity.allInstances()) {
+    if (ent.attributes->collect(a | a.name).asSet().size() <> ent.attributes.size()) {
+        errorList.add("DUPLICATE: Entity '" + ent.name + "' has attributes with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+}
+for (svc in SMM!Service.allInstances()) {
+    if (svc.methods->collect(m | m.name).asSet().size() <> svc.methods.size()) {
+        errorList.add("DUPLICATE: Service '" + svc.name + "' has methods with duplicate names.");
+        scDuplicate := scDuplicate + 1;
+    }
+}
+for (ctrl in SMM!Controller.allInstances()) {
+    if (ctrl.endpoints->collect(e | e.path).asSet().size() <> ctrl.endpoints.size()) {
+        errorList.add("DUPLICATE: Controller '" + ctrl.name + "' has endpoints with duplicate paths.");
+        scDuplicate := scDuplicate + 1;
+    }
+}
+
+var scWellFormedness = errorList.size() - scOrphan - scBroken - scDuplicate;
+scViolations := scWellFormedness;
+
+// Print all collected errors
+if (errorList.size() > 0) {
+    for (i in 0.iota(errorList.size() - 1, 1)) {
+        ("  [" + (i + 1) + "] " + errorList.get(i)).println();
+    }
+} else {
+    ("  No violations found.").println();
+}
+("").println();
+("  SC Well-formedness violations: " + scWellFormedness).println();
+("  SM Orphan elements: " + scOrphan).println();
+("  SM Broken refs: " + scBroken).println();
+("  SM Duplicates: " + scDuplicate).println();
+("  Total errors: " + errorList.size()).println();
+
+// ============================================================
+// Metric 1: SC (Syntactic Correctness)
+// ============================================================
+("--- M1: Syntactic Correctness ---").println();
+("  Violations: " + scViolations).println();
+
+var scScore = 5;
+if (scViolations > 10) { scScore := 1; }
+else if (scViolations > 5) { scScore := 2; }
+else if (scViolations > 2) { scScore := 3; }
+else if (scViolations > 0) { scScore := 4; }
+("  SC Score: " + scScore + "/5").println();
+("").println();
+
+// ============================================================
+// Metric 2: AF (Architectural Fidelity)
+// ============================================================
+("--- M2: Architectural Fidelity ---").println();
+var hmmHex = HMM!Hexagon.allInstances().first();
+var smmApp = SMM!Application.allInstances().first();
+var smmMod = smmApp.modules.first();
+
+var afPassed = 0;
+
+var inboundAdapters = hmmHex.infrastructure.adapters->select(a | a.isTypeOf(HMM!InboundAdapter));
+if (smmMod.controllers.size() >= inboundAdapters.size()) {
+    ("  PASS R1: Controllers (" + smmMod.controllers.size()
+        + ") >= InboundAdapters (" + inboundAdapters.size() + ")").println();
+    afPassed := afPassed + 1;
+} else {
+    ("  FAIL R1: Controllers (" + smmMod.controllers.size()
+        + ") < InboundAdapters (" + inboundAdapters.size() + ")").println();
+}
+
+if (smmMod.services.size() >= hmmHex.application.services.size()) {
+    ("  PASS R2: Services (" + smmMod.services.size()
+        + ") >= ApplicationServices (" + hmmHex.application.services.size() + ")").println();
+    afPassed := afPassed + 1;
+} else {
+    ("  FAIL R2").println();
+}
+
+var outboundPorts = hmmHex.infrastructure.ports->select(p | p.isTypeOf(HMM!OutboundPort));
+if (smmMod.repositories.size() >= outboundPorts.size()) {
+    ("  PASS R3: Repos (" + smmMod.repositories.size()
+        + ") >= OutboundPorts (" + outboundPorts.size() + ")").println();
+    afPassed := afPassed + 1;
+} else {
+    ("  FAIL R3").println();
+}
+
+var zeroDepSvc = smmMod.services->select(s | s.requiredRepositories.size() = 0);
+if (zeroDepSvc.size() = 0) {
+    ("  PASS R4: All services use requiredRepositories").println();
+    afPassed := afPassed + 1;
+} else {
+    ("  FAIL R4: " + zeroDepSvc->collect(s | s.name).concat(", ") + " have no repo deps").println();
+}
+
+var entityNames = smmMod.entities->collect(e | e.name).asSet();
+var controllerNames = smmMod.controllers->collect(c | c.name).asSet();
+var leaks = entityNames->select(e | controllerNames->includes(e));
+if (leaks.size() = 0) {
+    ("  PASS R5: No domain entity names in controllers").println();
+    afPassed := afPassed + 1;
+} else {
+    ("  FAIL R5: " + leaks.concat(", ") + " appear in controllers").println();
+}
+
+var afScore = (afPassed * 5) / 5;
+("  AF Score: " + afScore + "/5").println();
+("").println();
+
+// ============================================================
+// Metric 3: FC (Functional Completeness)
+// ============================================================
+("--- M3: Functional Completeness ---").println();
+var fcGenerated = 0;
+fcGenerated := fcGenerated + smmMod.entities.size();
+fcGenerated := fcGenerated + smmMod.valueObjects.size();
+fcGenerated := fcGenerated + smmMod.repositories.size();
+fcGenerated := fcGenerated + smmMod.services.size();
+fcGenerated := fcGenerated + smmMod.controllers.size();
+fcGenerated := fcGenerated + smmMod.dtos.size();
+
+// Configure expected count per domain specification
+var fcExpected = 25;
+var fcRatio = 0;
+if (fcExpected > 0) { fcRatio := fcGenerated.asReal() / fcExpected; }
+("  Generated: " + fcGenerated + ", Expected: " + fcExpected
+    + ", Ratio: " + (fcRatio * 100) + "%").println();
+
+var fcScore = 1;
+if (fcRatio >= 0.95) { fcScore := 5; }
+else if (fcRatio >= 0.80) { fcScore := 4; }
+else if (fcRatio >= 0.60) { fcScore := 3; }
+else if (fcRatio >= 0.40) { fcScore := 2; }
+("  FC Score: " + fcScore + "/5").println();
+("").println();
+
+// ============================================================
+// Metric 4: SM (Structural Maintainability)
+// ============================================================
+("--- M4: Structural Maintainability ---").println();
+("  Orphan elements: " + scOrphan).println();
+("  Broken refs: " + scBroken).println();
+("  Duplicates: " + scDuplicate).println();
+
+var smTotalIssues = scOrphan + scBroken + scDuplicate;
+var smScore = 5;
+if (smTotalIssues > 10) { smScore := 1; }
+else if (smTotalIssues > 5) { smScore := 2; }
+else if (smTotalIssues > 2) { smScore := 3; }
+else if (smTotalIssues > 0) { smScore := 4; }
+("  SM Score: " + smScore + "/5").println();
+("").println();
+
+// ============================================================
+// Final Summary
+// ============================================================
+("╔═══════════════════════════════════════════════════════════").println();
+("║  FINAL SCORES                                            ").println();
+("╠═══════════════════════════════════════════════════════════").println();
+("║  SC (Syntactic Correctness)    : " + scScore + "/5").println();
+("║  AF (Architectural Fidelity)   : " + afScore + "/5").println();
+("║  FC (Functional Completeness)  : " + fcScore + "/5").println();
+("║  SM (Structural Maintainability): " + smScore + "/5").println();
+("╠═══════════════════════════════════════════════════════════").println();
+var overall = (scScore + afScore + fcScore + smScore).asReal() / 4;
+("║  OVERALL                      : " + overall + "/5").println();
+("╚═══════════════════════════════════════════════════════════").println();
