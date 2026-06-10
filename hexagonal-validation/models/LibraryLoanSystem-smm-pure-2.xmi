@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<smm:Application xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:smm="smm" xsi:schemaLocation="smm smm.ecore" name="LibraryLoanSystem" basePackage="com.library" javaVersion="21" serverPort="8080">
+<smm:Application xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:smm="smm" xsi:schemaLocation="smm smm.ecore" name="LibraryLoan" basePackage="com.library.loan" javaVersion="21" serverPort="8080">
   <modules name="library">
     <entities name="Book">
       <attributes name="id" isId="true">
@@ -17,12 +17,6 @@
       <attributes name="availabilityStatus">
         <type xsi:type="smm:PrimitiveType"/>
       </attributes>
-      <attributes name="metadata">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@valueObjects.0"/>
-      </attributes>
-      <attributes name="publisherInfo">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@valueObjects.1"/>
-      </attributes>
     </entities>
     <entities name="Loan">
       <attributes name="id" isId="true">
@@ -31,14 +25,11 @@
       <attributes name="status">
         <type xsi:type="smm:PrimitiveType"/>
       </attributes>
-      <attributes name="loanPeriod">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@valueObjects.2"/>
+      <attributes name="startDate">
+        <type xsi:type="smm:PrimitiveType" kind="DATE"/>
       </attributes>
-      <attributes name="book">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@entities.0"/>
-      </attributes>
-      <attributes name="member">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@entities.2"/>
+      <attributes name="dueDate">
+        <type xsi:type="smm:PrimitiveType" kind="DATE"/>
       </attributes>
     </entities>
     <entities name="Member">
@@ -51,12 +42,6 @@
       <attributes name="membershipDate">
         <type xsi:type="smm:PrimitiveType" kind="DATE"/>
       </attributes>
-      <attributes name="email">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@valueObjects.3"/>
-      </attributes>
-      <attributes name="phone">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@valueObjects.4"/>
-      </attributes>
     </entities>
     <entities name="BookCopy">
       <attributes name="id" isId="true">
@@ -67,9 +52,6 @@
       </attributes>
       <attributes name="conditionStatus">
         <type xsi:type="smm:PrimitiveType"/>
-      </attributes>
-      <attributes name="book">
-        <type xsi:type="smm:CustomType" reference="//@modules.0/@entities.0"/>
       </attributes>
     </entities>
     <valueObjects name="BookMetadata">
@@ -98,7 +80,7 @@
       <attributes name="dueDate">
         <type xsi:type="smm:PrimitiveType" kind="DATE"/>
       </attributes>
-      <attributes name="duration">
+      <attributes name="loanDuration">
         <type xsi:type="smm:PrimitiveType" kind="INTEGER"/>
       </attributes>
     </valueObjects>
@@ -113,7 +95,6 @@
       </attributes>
     </valueObjects>
     <repositories name="BookRepository" entityType="//@modules.0/@entities.0">
-      <idType xsi:type="smm:PrimitiveType" kind="UUID"/>
       <methods name="findByTitle">
         <returnType xsi:type="smm:CollectionType">
           <innerType xsi:type="smm:CustomType" reference="//@modules.0/@entities.0"/>
@@ -122,20 +103,24 @@
           <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
+      <methods name="existsByIsbn">
+        <returnType xsi:type="smm:PrimitiveType" kind="BOOLEAN"/>
+        <parameters name="isbn">
+          <type xsi:type="smm:PrimitiveType"/>
+        </parameters>
+      </methods>
     </repositories>
     <repositories name="LoanRepository" entityType="//@modules.0/@entities.1">
-      <idType xsi:type="smm:PrimitiveType" kind="UUID"/>
-      <methods name="findByMember">
+      <methods name="findByMemberId">
         <returnType xsi:type="smm:CollectionType">
           <innerType xsi:type="smm:CustomType" reference="//@modules.0/@entities.1"/>
         </returnType>
         <parameters name="memberId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </repositories>
     <repositories name="MemberRepository" entityType="//@modules.0/@entities.2">
-      <idType xsi:type="smm:PrimitiveType" kind="UUID"/>
       <methods name="findByEmail">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@entities.2"/>
         <parameters name="email">
@@ -144,13 +129,10 @@
       </methods>
     </repositories>
     <repositories name="BookCopyRepository" entityType="//@modules.0/@entities.3">
-      <idType xsi:type="smm:PrimitiveType" kind="UUID"/>
-      <methods name="findByBook">
-        <returnType xsi:type="smm:CollectionType">
-          <innerType xsi:type="smm:CustomType" reference="//@modules.0/@entities.3"/>
-        </returnType>
-        <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+      <methods name="findByBarcode">
+        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@entities.3"/>
+        <parameters name="barcode">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </repositories>
@@ -163,40 +145,51 @@
           <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
-      <methods name="getBook">
-        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.0"/>
+      <methods name="checkAvailability">
+        <returnType xsi:type="smm:PrimitiveType" kind="BOOLEAN"/>
         <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </services>
     <services name="LoanService" requiredRepositories="//@modules.0/@repositories.1">
-      <methods name="requestLoan">
+      <methods name="createLoan">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
         <parameters name="memberId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
         <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
-        </parameters>
-      </methods>
-      <methods name="returnBook">
-        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
       <methods name="renewLoan">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
         <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
+        </parameters>
+      </methods>
+      <methods name="returnBook">
+        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
+        <parameters name="loanId">
+          <type xsi:type="smm:PrimitiveType"/>
+        </parameters>
+      </methods>
+    </services>
+    <services name="BookCopyService" requiredRepositories="//@modules.0/@repositories.3">
+      <methods name="addNewCopy">
+        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.3"/>
+        <parameters name="bookId">
+          <type xsi:type="smm:PrimitiveType"/>
+        </parameters>
+        <parameters name="barcode">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </services>
     <services name="MemberService" requiredRepositories="//@modules.0/@repositories.2">
       <methods name="registerMember">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.2"/>
-        <parameters name="name">
+        <parameters name="fullName">
           <type xsi:type="smm:PrimitiveType"/>
         </parameters>
         <parameters name="email">
@@ -206,45 +199,23 @@
       <methods name="getMember">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.2"/>
         <parameters name="memberId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </services>
-    <services name="BookCopyService" requiredRepositories="//@modules.0/@repositories.3">
-      <methods name="addBookCopy">
-        <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.3"/>
-        <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
-        </parameters>
-      </methods>
-    </services>
-    <services name="AvailabilityService">
+    <services name="AvailabilityService" requiredRepositories="//@modules.0/@repositories.0">
       <methods name="isBookAvailable">
         <returnType xsi:type="smm:PrimitiveType" kind="BOOLEAN"/>
         <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </services>
     <services name="FineCalculatorService">
       <methods name="calculateFine">
         <returnType xsi:type="smm:PrimitiveType" kind="DOUBLE"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
-        </parameters>
-      </methods>
-    </services>
-    <services name="NotificationService">
-      <methods name="sendOverdueNotice">
-        <returnType xsi:type="smm:PrimitiveType" kind="BOOLEAN"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
-        </parameters>
-      </methods>
-      <methods name="sendLoanConfirmation">
-        <returnType xsi:type="smm:PrimitiveType" kind="BOOLEAN"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+        <parameters name="overdueDays">
+          <type xsi:type="smm:PrimitiveType" kind="INTEGER"/>
         </parameters>
       </methods>
     </services>
@@ -257,52 +228,52 @@
           <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
-      <methods xsi:type="smm:Endpoint" name="getBook" path="/{bookId}">
+      <methods xsi:type="smm:Endpoint" name="getBook" path="/{id}">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.0"/>
-        <parameters name="bookId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+        <parameters name="id">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </controllers>
     <controllers name="LoanController" basePath="/api/loans" service="//@modules.0/@services.1">
       <methods xsi:type="smm:Endpoint" name="requestLoan" httpMethod="POST" path="">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
-        <parameters name="request" kind="BODY">
-          <type xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
+        <parameters name="body" kind="BODY">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
-      <methods xsi:type="smm:Endpoint" name="returnBook" httpMethod="POST" path="/{loanId}/return">
+      <methods xsi:type="smm:Endpoint" name="returnBook" httpMethod="PUT" path="/{id}/return">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+        <parameters name="id">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
-      <methods xsi:type="smm:Endpoint" name="renewLoan" httpMethod="POST" path="/{loanId}/renew">
+      <methods xsi:type="smm:Endpoint" name="renewLoan" httpMethod="PUT" path="/{id}/renew">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.1"/>
-        <parameters name="loanId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+        <parameters name="id">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </controllers>
-    <controllers name="MemberController" basePath="/api/members" service="//@modules.0/@services.2">
+    <controllers name="MemberController" basePath="/api/members" service="//@modules.0/@services.3">
       <methods xsi:type="smm:Endpoint" name="registerMember" httpMethod="POST" path="">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.2"/>
-        <parameters name="request" kind="BODY">
-          <type xsi:type="smm:CustomType" reference="//@modules.0/@dtos.2"/>
+        <parameters name="body" kind="BODY">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
-      <methods xsi:type="smm:Endpoint" name="getMember" path="/{memberId}">
+      <methods xsi:type="smm:Endpoint" name="getMember" path="/{id}">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.2"/>
-        <parameters name="memberId">
-          <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+        <parameters name="id">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </controllers>
-    <controllers name="BookCopyController" basePath="/api/copies" service="//@modules.0/@services.3">
+    <controllers name="BookCopyController" basePath="/api/copies" service="//@modules.0/@services.2">
       <methods xsi:type="smm:Endpoint" name="addBookCopy" httpMethod="POST" path="">
         <returnType xsi:type="smm:CustomType" reference="//@modules.0/@dtos.3"/>
-        <parameters name="request" kind="BODY">
-          <type xsi:type="smm:CustomType" reference="//@modules.0/@dtos.3"/>
+        <parameters name="body" kind="BODY">
+          <type xsi:type="smm:PrimitiveType"/>
         </parameters>
       </methods>
     </controllers>
@@ -327,11 +298,8 @@
       <attributes name="status">
         <type xsi:type="smm:PrimitiveType"/>
       </attributes>
-      <attributes name="bookId">
-        <type xsi:type="smm:PrimitiveType" kind="UUID"/>
-      </attributes>
-      <attributes name="memberId">
-        <type xsi:type="smm:PrimitiveType" kind="UUID"/>
+      <attributes name="dueDate">
+        <type xsi:type="smm:PrimitiveType" kind="DATE"/>
       </attributes>
     </dtos>
     <dtos name="MemberDTO">
@@ -351,9 +319,6 @@
       </attributes>
       <attributes name="barcode">
         <type xsi:type="smm:PrimitiveType"/>
-      </attributes>
-      <attributes name="bookId">
-        <type xsi:type="smm:PrimitiveType" kind="UUID"/>
       </attributes>
     </dtos>
   </modules>

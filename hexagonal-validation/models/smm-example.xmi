@@ -9,11 +9,18 @@
     basePackage="com.example"
     javaVersion="21"
     serverPort="8080">
-  <modules>
+  <modules name="applicationModule">
     <entities
         name="entity">
       <attributes
-          name="attr">
+          name="id"
+          isId="true">
+        <type
+            xsi:type="smm:PrimitiveType"
+            kind="UUID"/>
+      </attributes>
+      <attributes
+          name="valueObject">
         <type
             xsi:type="smm:CustomType"
             reference="//@modules.0/@valueObjects.0"/>
@@ -21,17 +28,60 @@
     </entities>
     <valueObjects
         name="valueObject">
-      <attributes/>
+      <attributes
+          name="name"/>
     </valueObjects>
-    <repositories>
-      <methods/>
-    </repositories>
-    <services>
-      <methods/>
-    </services>
-    <controllers>
+    <repositories
+        name="repository"
+        entityType="//@modules.0/@entities.0">
       <methods
-          xsi:type="smm:Endpoint"/>
+          name="getEntity">
+        <returnType
+            xsi:type="smm:CustomType"
+            reference="//@modules.0/@entities.0"/>
+      </methods>
+    </repositories>
+    <services
+        name="entityService"
+        requiredRepositories="//@modules.0/@repositories.0">
+      <methods
+          name="getEntity">
+        <returnType
+            xsi:type="smm:CustomType"
+            reference="//@modules.0/@dtos.0"/>
+        <parameters
+            name="id">
+          <type
+              xsi:type="smm:PrimitiveType"/>
+        </parameters>
+      </methods>
+    </services>
+    <controllers
+        name="controllerName"
+        basePath="api/"
+        service="//@modules.0/@services.0">
+      <methods
+          xsi:type="smm:Endpoint"
+          name="getEntity"
+          path="entity">
+        <returnType
+            xsi:type="smm:CustomType"
+            reference="//@modules.0/@dtos.0"/>
+        <parameters
+            name="entityId">
+          <type
+              xsi:type="smm:PrimitiveType"/>
+        </parameters>
+      </methods>
     </controllers>
+    <dtos name="entityDTO">
+      <attributes
+          name="id"
+          isId="true">
+        <type
+            xsi:type="smm:PrimitiveType"
+            kind="UUID"/>
+      </attributes>
+    </dtos>
   </modules>
 </smm:Application>
