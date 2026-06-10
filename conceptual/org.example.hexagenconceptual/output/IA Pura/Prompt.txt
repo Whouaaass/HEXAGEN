@@ -1,0 +1,37 @@
+Eres un arquitecto de software experto en arquitectura hexagonal (Ports and Adapters).
+
+Tengo un sistema de biblioteca con las siguientes características:
+
+SUBDOMINIO 1 - Catálogo:
+- Libros (Book): ISBN, título, autor, año, estado, copias totales/disponibles
+- Autores (Author): ID, nombre, fecha nacimiento, nacionalidad
+- Categorías (Category): ID, nombre, descripción
+
+SUBDOMINIO 2 - Préstamos:
+- Usuarios (User): ID, nombre, email, fecha membresía, estado
+- Préstamos (Loan): ID, fecha préstamo, fecha vencimiento, fecha devolución
+- Reservas (Reservation): ID, fecha, fecha expiración, estado
+
+SUBDOMINIO 3 - Multas:
+- Multas (Fine): ID, monto, fecha emisión, fecha pago, estado
+
+RELACIONES:
+- Un Usuario tiene muchos Préstamos (composición)
+- Un Usuario tiene muchas Reservas (composición)
+- Un Préstamo referencia un Libro (asociación)
+- Una Multa se aplica a un Préstamo (asociación)
+
+SERVICIOS:
+- CatalogService: buscar, agregar, actualizar, eliminar libros
+- LoanService: prestar, devolver, renovar, verificar vencidos
+- UserService: registrar, actualizar, suspender usuarios
+- ReservationService: crear, cancelar, notificar disponibilidad
+- FineService: calcular, emitir, pagar multas
+
+Genera un modelo completo en arquitectura hexagonal con:
+1. Capa de Dominio: AggregateRoots, Entities, ValueObjects
+2. Capa de Aplicación: ApplicationServices con UseCases
+3. Capa de Infraestructura: Ports y Adapters
+4. Links entre componentes
+
+Haz uso de herramientas en la web para el modelado

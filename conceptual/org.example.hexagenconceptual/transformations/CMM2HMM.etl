@@ -1,5 +1,6 @@
 @model Source "platform:/resource/HEXAGEN/conceptual/org.example.hexagenconceptual/models/complex_conceptual.xmi" read
 @model Target "platform:/resource/HEXAGEN/hexagonal/co.edu.unicauca.hexagen/models/LibraryV3.xmi" write
+
 // =============================================================================
 // PRE-TRANSFORMATION: Debugging
 // =============================================================================
@@ -11,6 +12,7 @@ pre {
     "Target model ready: true".println();
     "========================================".println();
 }
+
 // =============================================================================
 // OPERACIÓN AUXILIAR: Obtener nombre de forma segura
 // =============================================================================
@@ -33,221 +35,226 @@ rule Domain2Hexagon
     
     hex.name = cm.name;
 
-        // Crear las 3 capas obligatorias del hexágono
-        var infra = new Target!InfrastructureLayer;
-        infra.name = "Infrastructure";
-        hex.infrastructure = infra;
+    // Crear las 3 capas obligatorias del hexágono
+    var infra = new Target!InfrastructureLayer;
+    infra.name = "Infrastructure";
+    hex.infrastructure = infra;
 
-        var app = new Target!ApplicationLayer;
-        app.name = "Application";
-        hex.application = app;
+    var app = new Target!ApplicationLayer;
+    app.name = "Application";
+    hex.application = app;
 
-        var core = new Target!DomainCore;
-        core.name = "DomainCore";
-        hex.domain = core;
+    var core = new Target!DomainCore;
+    core.name = "DomainCore";
+    hex.domain = core;
 
-        // FASE 1: Transformar Concepts → AggregateRoots
-        for (subDomain in cm.subDomains) {
-            for (concept in subDomain.concepts) {
-                var agg = concept.equivalent();
-                core.aggregates.add(agg);
-            }
+    // FASE 1: Transformar Concepts → AggregateRoots
+    for (subDomain in cm.subDomains) {
+        for (concept in subDomain.concepts) {
+            var agg = concept.equivalent();
+            core.aggregates.add(agg);
         }
+    }
 
-        // FASE 2: Transformar ValueObjects
-        for (subDomain in cm.subDomains) {
-            for (vo in subDomain.valueObjects) {
-                var hvo = vo.equivalent();
-                
-                var ownerAgg = null;
-                for (a in core.aggregates) {
-                    var aggName = getName(a);
-                    if (aggName <> null) {
-                        for (sd in cm.subDomains) {
-                            for (c in sd.concepts) {
-                                var cName = getName(c);
-                                if (cName = aggName) {
-                                    for (attr in c.attributes) {
-                                        if (attr.type = getName(vo) or getName(attr) = getName(vo)) {
-                                            ownerAgg = a;
-                                            break;
-                                        }
+    // FASE 2: Transformar ValueObjects
+    for (subDomain in cm.subDomains) {
+        for (vo in subDomain.valueObjects) {
+            var hvo = vo.equivalent();
+            
+            var ownerAgg = null;
+            for (a in core.aggregates) {
+                var aggName = getName(a);
+                if (aggName <> null) {
+                    for (sd in cm.subDomains) {
+                        for (c in sd.concepts) {
+                            var cName = getName(c);
+                            if (cName = aggName) {
+                                for (attr in c.attributes) {
+                                    if (attr.type = getName(vo) or getName(attr) = getName(vo)) {
+                                        ownerAgg = a;
+                                        break;
                                     }
                                 }
-                                if (ownerAgg <> null) break;
                             }
                             if (ownerAgg <> null) break;
                         }
+                        if (ownerAgg <> null) break;
                     }
-                    if (ownerAgg <> null) break;
                 }
-                
-                if (ownerAgg == null and not core.aggregates.isEmpty()) {
-                    ownerAgg = core.aggregates.first();
-                }
-                
-                if (ownerAgg <> null) {
-                    ownerAgg.attributes.add(hvo);
-                }
+                if (ownerAgg <> null) break;
+            }
+            
+            if (ownerAgg == null and not core.aggregates.isEmpty()) {
+                ownerAgg = core.aggregates.first();
+            }
+            
+            if (ownerAgg <> null) {
+                // ✅ CORREGIDO: AggregateRoot usa 'members', no 'attributes'
+                ownerAgg.members.add(hvo);
             }
         }
+    }
 
-        // FASE 3: Relationships → OutboundPorts + OutboundAdapters + Links
-        for (subDomain in cm.subDomains) {
-            for (rel in subDomain.relationships) {
-                var sourceName = getName(rel.source);
-                var targetName = getName(rel.target);
-                if (sourceName <> null and targetName <> null) {
-                    
-                    var outPort = new Target!OutboundPort;
-                    outPort.name = sourceName + targetName + "Repository";
-                    infra.ports.add(outPort);
+    // FASE 3: Relationships → OutboundPorts + OutboundAdapters + Links
+    for (subDomain in cm.subDomains) {
+        for (rel in subDomain.relationships) {
+            var sourceName = getName(rel.source);
+            var targetName = getName(rel.target);
+            if (sourceName <> null and targetName <> null) {
+                
+                var outPort = new Target!OutboundPort;
+                outPort.name = sourceName + targetName + "Repository";
+                infra.ports.add(outPort);
 
-                    var outAdapter = new Target!OutboundAdapter;
-                    outAdapter.name = sourceName + targetName + "Adapter";
-                    infra.adapters.add(outAdapter);
+                var outAdapter = new Target!OutboundAdapter;
+                outAdapter.name = sourceName + targetName + "Adapter";
+                infra.adapters.add(outAdapter);
 
-                    var link = new Target!AdapterPortLink;
-                    link.name = sourceName + targetName + "Link";
-                    link.source = outAdapter;
-                    link.target = outPort;
-                    hex.links.add(link);
-                }
+                var link = new Target!AdapterPortLink;
+                link.name = sourceName + targetName + "Link";
+                link.source = outAdapter;
+                link.target = outPort;
+                hex.links.add(link);
             }
         }
+    }
 
-        // FASE 4: BusinessServices → ApplicationServices + InboundPorts/Adapters + Links
-        for (subDomain in cm.subDomains) {
-            for (svc in subDomain.businessServices) {
-                var appSvc = svc.equivalent();
-                var svcName = getName(svc);
-                
-                if (svcName <> null) {
-                    app.services.add(appSvc);
+    // FASE 4: BusinessServices → ApplicationServices + InboundPorts/Adapters + Links
+    for (subDomain in cm.subDomains) {
+        for (svc in subDomain.businessServices) {
+            var appSvc = svc.equivalent();
+            var svcName = getName(svc);
+            
+            if (svcName <> null) {
+                app.services.add(appSvc);
 
-                    var inPort = new Target!InboundPort;
-                    inPort.name = svcName + "Port";
-                    infra.ports.add(inPort);
+                var inPort = new Target!InboundPort;
+                inPort.name = svcName + "Port";
+                infra.ports.add(inPort);
 
-                    var inAdapter = new Target!InboundAdapter;
-                    inAdapter.name = svcName + "RestAdapter";
-                    infra.adapters.add(inAdapter);
+                var inAdapter = new Target!InboundAdapter;
+                inAdapter.name = svcName + "RestAdapter";
+                infra.adapters.add(inAdapter);
 
-                    var inLink = new Target!AdapterPortLink;
-                    inLink.name = svcName + "AdapterPortLink";
-                    inLink.source = inAdapter;
-                    inLink.target = inPort;
-                    hex.links.add(inLink);
+                var inLink = new Target!AdapterPortLink;
+                inLink.name = svcName + "AdapterPortLink";
+                inLink.source = inAdapter;
+                inLink.target = inPort;
+                hex.links.add(inLink);
 
-                    var svcPortLink = new Target!ServicePortLink;
-                    svcPortLink.name = svcName + "ExposedLink";
-                    svcPortLink.source = appSvc;
-                    svcPortLink.target = inPort;
-                    hex.links.add(svcPortLink);
-                }
+                var svcPortLink = new Target!ServicePortLink;
+                svcPortLink.name = svcName + "ExposedLink";
+                svcPortLink.source = appSvc;
+                svcPortLink.target = inPort;
+                hex.links.add(svcPortLink);
+            }
 
-                for (refConcept in svc.concepts) {
-                    var refName = getName(refConcept);
-                    if (refName <> null) {
-                        var relatedAgg = core.aggregates.selectOne(a | getName(a) = refName);
-                        if (relatedAgg <> null) {
-                            var aggLink = new Target!ServiceAggregateLink;
-                            aggLink.name = svcName + "Coordinates" + refName;
-                            aggLink.source = appSvc;
-                            aggLink.target = relatedAgg;
-                            hex.links.add(aggLink);
-                        }
+            for (refConcept in svc.concepts) {
+                var refName = getName(refConcept);
+                if (refName <> null) {
+                    var relatedAgg = core.aggregates.selectOne(a | getName(a) = refName);
+                    if (relatedAgg <> null) {
+                        var aggLink = new Target!ServiceAggregateLink;
+                        aggLink.name = svcName + "Coordinates" + refName;
+                        aggLink.source = appSvc;
+                        aggLink.target = relatedAgg;
+                        hex.links.add(aggLink);
                     }
                 }
+            }
 
-                for (port in infra.ports.select(p | p.isKindOf(Target!OutboundPort))) {
-                    if (svc.concepts.exists(c | port.name.contains(getName(c)))) {
-                        var callLink = new Target!ServicePortLink;
-                        callLink.name = svcName + "Calls" + port.name;
-                        callLink.source = appSvc;
-                        callLink.target = port;
-                        hex.links.add(callLink);
-                    }
+            for (port in infra.ports.select(p | p.isKindOf(Target!OutboundPort))) {
+                if (svc.concepts.exists(c | port.name.contains(getName(c)))) {
+                    var callLink = new Target!ServicePortLink;
+                    callLink.name = svcName + "Calls" + port.name;
+                    callLink.source = appSvc;
+                    callLink.target = port;
+                    hex.links.add(callLink);
                 }
             }
         }
     }
+}
 
 rule Concept2AggregateRoot
     transform concept : Source!Concept to agg : Target!AggregateRoot {
         
-        agg.name = getName(concept);
+    agg.name = getName(concept);
 
-        for (attr in concept.attributes) {
-            var ha = new Target!Attribute;
-            ha.name = getName(attr);
-            ha.type = attr.type;
-            agg.values.add(ha);
-        }
+    for (attr in concept.attributes) {
+        var ha = new Target!Attribute;
+        ha.name = getName(attr);
+        ha.type = attr.type;
+        // ✅ CORREGIDO: AggregateRoot usa 'members', no 'values'
+        agg.members.add(ha);
+    }
 
-        var container = concept.eContainer();
-        if (container <> null) {
-            var subDomainContainer = container.eContainer();
-            if (subDomainContainer <> null and subDomainContainer.eClass().name = 'SubDomain') {
-                for (rel in subDomainContainer.relationships) {
-                    if (rel.source = concept and rel.type = "composition") {
-                        var targetName = getName(rel.target);
-                        if (targetName <> null) {
-                            var refEntity = new Target!Entity;
-                            refEntity.name = targetName + "Ref";
+    var container = concept.eContainer();
+    if (container <> null) {
+        var subDomainContainer = container.eContainer();
+        if (subDomainContainer <> null and subDomainContainer.eClass().name = 'SubDomain') {
+            for (rel in subDomainContainer.relationships) {
+                if (rel.source = concept and rel.type = "composition") {
+                    var targetName = getName(rel.target);
+                    if (targetName <> null) {
+                        var refEntity = new Target!Entity;
+                        refEntity.name = targetName + "Ref";
 
-                            var idAttr = new Target!Attribute;
-                            idAttr.name = targetName.toFirstLower() + "Id";
-                            idAttr.type = "String";
-                            refEntity.values.add(idAttr);
+                        var idAttr = new Target!Attribute;
+                        idAttr.name = targetName.toFirstLower() + "Id";
+                        idAttr.type = "String";
+                        // ✅ Entity SÍ tiene 'values', esto está correcto
+                        refEntity.values.add(idAttr);
 
-                            agg.internalEntities.add(refEntity);
-                        }
+                        // ✅ CORREGIDO: AggregateRoot usa 'members' para entidades internas
+                        agg.members.add(refEntity);
                     }
                 }
             }
         }
     }
+}
 
 rule ValueObject2ValueObject
     transform vo : Source!ValueObject to hvo : Target!ValueObject {
         
-        hvo.name = getName(vo);
+    hvo.name = getName(vo);
 
-        for (attr in vo.attributes) {
-            var ha = new Target!Attribute;
-            ha.name = getName(attr);
-            ha.type = attr.type;
-            hvo.values.add(ha);
-        }
+    for (attr in vo.attributes) {
+        var ha = new Target!Attribute;
+        ha.name = getName(attr);
+        ha.type = attr.type;
+        // ✅ ValueObject SÍ tiene 'values', esto está correcto
+        hvo.values.add(ha);
     }
+}
 
 rule BusinessService2ApplicationService
     transform svc : Source!BusinessService to appSvc : Target!ApplicationService {
         
-        appSvc.name = getName(svc);
+    appSvc.name = getName(svc);
 
-        for (op in svc.operations) {
-            var useCase = new Target!UseCase;
-            useCase.name = getName(op);
+    for (op in svc.operations) {
+        var useCase = new Target!UseCase;
+        useCase.name = getName(op);
 
-            if (op.returnType <> null and not op.returnType.trim().isEmpty()) {
-                var outAttr = new Target!Attribute;
-                outAttr.name = "result";
-                outAttr.type = op.returnType;
-                useCase.output.add(outAttr);
-            }
-
-            for (param in op.parameters) {
-                var inputAttr = new Target!Attribute;
-                inputAttr.name = getName(param);
-                inputAttr.type = param.type;
-                useCase.input.add(inputAttr);
-            }
-
-            appSvc.useCases.add(useCase);
+        if (op.returnType <> null and not op.returnType.trim().isEmpty()) {
+            var outAttr = new Target!Attribute;
+            outAttr.name = "result";
+            outAttr.type = op.returnType;
+            useCase.output.add(outAttr);
         }
+
+        for (param in op.parameters) {
+            var inputAttr = new Target!Attribute;
+            inputAttr.name = getName(param);
+            inputAttr.type = param.type;
+            useCase.input.add(inputAttr);
+        }
+
+        appSvc.useCases.add(useCase);
     }
+}
 
 operation toFirstLower(str : String) : String {
     if (str == null or str.isEmpty()) { 
@@ -255,6 +262,7 @@ operation toFirstLower(str : String) : String {
     }
     return str.substring(0,1).toLowerCase() + str.substring(1);
 }
+
 post {
     "TRANSFORMACION FINALIZADA CORRECTAMENTE".println();
     "Modelo destino guardado en: LibraryV3.xmi".println();

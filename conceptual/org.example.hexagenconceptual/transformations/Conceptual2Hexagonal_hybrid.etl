@@ -1,0 +1,292 @@
+/*****************************************************************
+ * Conceptual -> Hexagonal Architecture Transformation
+ * ETL Transformation - Hybrid Version (MDE + AI corrected)
+ *
+ * Correcciones aplicadas:
+ *   1. bs.relatedConcepts -> bs.concepts (nombre real en el metamodelo)
+ *   2. InboundPorts/Adapters y OutboundPorts/Adapters se agregan
+ *      explicitamente a la InfrastructureLayer del Hexagon
+ *   3. Links (AdapterPortLink, ServicePortLink, ServiceAggregateLink)
+ *      se agregan al Hexagon como contenedor raiz
+ *   4. Se usa una variable global 'currentHexagon' para que las reglas
+ *      secundarias puedan acceder a las capas del Hexagon
+ *****************************************************************/
+
+var aggregateMap = new Map;
+var serviceMap   = new Map;
+var portMap      = new Map;
+var infraLayer   = null;
+var appLayer     = null;
+var coreLayer    = null;
+var hexagon      = null;
+
+/*****************************************************************
+ * Helpers
+ *****************************************************************/
+
+operation String safe() : String {
+    if (self.isUndefined()) return "";
+    return self;
+}
+
+operation Any notNull() : Boolean {
+    return not self.isUndefined();
+}
+
+/*****************************************************************
+ * DOMAIN -> HEXAGON
+ * Se ejecuta primero; inicializa las tres capas globales.
+ *****************************************************************/
+
+rule Domain2Hexagon
+transform d : Source!Domain
+to h : Target!Hexagon {
+
+    h.name = d.name.safe();
+
+    -- Crear las tres capas
+    var infra = new Target!InfrastructureLayer;
+    var app   = new Target!ApplicationLayer;
+    var core  = new Target!DomainCore;
+
+    infra.name = "Infrastructure";
+    app.name   = "Application";
+    core.name  = "Domain";
+
+    h.infrastructureLayer = infra;
+    h.applicationLayer    = app;
+    h.domainCore          = core;
+
+    -- Guardar referencias globales para que otras reglas puedan usarlas
+    infraLayer = infra;
+    appLayer   = app;
+    coreLayer  = core;
+    hexagon    = h;
+}
+
+/*****************************************************************
+ * VALUE OBJECTS -> DomainCore
+ *****************************************************************/
+
+rule ValueObject2ValueObject
+transform vo : Source!ValueObject
+to tvo : Target!ValueObject {
+
+    tvo.name = vo.name.safe();
+
+    for (a in vo.attributes.select(x | x.notNull())) {
+        var value  = new Target!Value;
+        value.name = a.name.safe();
+        value.type = a.type.safe();
+        tvo.values.add(value);
+    }
+
+    -- Agregar al DomainCore
+    if (coreLayer.notNull()) {
+        coreLayer.valueObjects.add(tvo);
+    }
+}
+
+/*****************************************************************
+ * CONCEPT -> AGGREGATE ROOT -> DomainCore
+ *****************************************************************/
+
+rule Concept2AggregateRoot
+transform c : Source!Concept
+to ar : Target!AggregateRoot {
+
+    ar.name = c.name.safe();
+    aggregateMap.put(c, ar);
+
+    for (a in c.attributes.select(x | x.notNull())) {
+        var member  = new Target!Member;
+        member.name = a.name.safe();
+        member.type = a.type.safe();
+        ar.members.add(member);
+    }
+
+    -- Agregar al DomainCore
+    if (coreLayer.notNull()) {
+        coreLayer.aggregateRoots.add(ar);
+    }
+}
+
+/*****************************************************************
+ * COMPOSITION -> ENTITY interna dentro del AggregateRoot
+ *****************************************************************/
+
+rule CompositionRelationship2Entity
+transform r : Source!Relationship
+when {
+    r.type.notNull() and r.type = "composition"
+}
+to e : Target!Entity {
+
+    if (r.target.notNull()) {
+        e.name = r.target.name.safe();
+
+        for (a in r.target.attributes.select(x | x.notNull())) {
+            var value  = new Target!Value;
+            value.name = a.name.safe();
+            value.type = a.type.safe();
+            e.values.add(value);
+        }
+
+        var root = aggregateMap.get(r.source);
+        if (root.notNull()) {
+            root.members.add(e);
+        }
+    }
+}
+
+/*****************************************************************
+ * RELATIONSHIPS (no composition) -> OutboundPort + OutboundAdapter
+ *   + AdapterPortLink  ->  InfrastructureLayer
+ *****************************************************************/
+
+rule Relationship2OutboundPort
+transform r : Source!Relationship
+when {
+    r.type.notNull() and r.type <> "composition"
+}
+to p : Target!OutboundPort,
+   a : Target!OutboundAdapter,
+   l : Target!AdapterPortLink {
+
+    var targetName = "";
+    if (r.target.notNull()) {
+        targetName = r.target.name.safe();
+    }
+
+    p.name = targetName + "Port";
+    a.name = targetName + "Adapter";
+
+    l.adapter = a;
+    l.port    = p;
+
+    portMap.put(r, p);
+
+    -- FIX: agregar a InfrastructureLayer
+    if (infraLayer.notNull()) {
+        infraLayer.outboundPorts.add(p);
+        infraLayer.outboundAdapters.add(a);
+        infraLayer.adapterPortLinks.add(l);
+    }
+}
+
+/*****************************************************************
+ * BUSINESS SERVICE -> ApplicationService + InboundPort
+ *   + InboundAdapter + AdapterPortLink
+ *****************************************************************/
+
+rule BusinessService2ApplicationService
+transform bs : Source!BusinessService
+to appSvc  : Target!ApplicationService,
+   port    : Target!InboundPort,
+   adapter : Target!InboundAdapter,
+   link    : Target!AdapterPortLink {
+
+    appSvc.name  = bs.name.safe();
+    port.name    = bs.name.safe() + "Port";
+    adapter.name = bs.name.safe() + "Adapter";
+
+    link.adapter = adapter;
+    link.port    = port;
+
+    serviceMap.put(bs, appSvc);
+    portMap.put(bs, port);
+
+    -- FIX: agregar a sus capas correspondientes
+    if (appLayer.notNull()) {
+        appLayer.applicationServices.add(appSvc);
+    }
+    if (infraLayer.notNull()) {
+        infraLayer.inboundPorts.add(port);
+        infraLayer.inboundAdapters.add(adapter);
+        infraLayer.adapterPortLinks.add(link);
+    }
+}
+
+/*****************************************************************
+ * BUSINESS OPERATION -> USE CASE
+ *****************************************************************/
+
+rule Operation2UseCase
+transform op : Source!BusinessOperation
+to uc : Target!UseCase {
+
+    uc.name = op.name.safe();
+
+    for (p in op.parameters.select(x | x.notNull())) {
+        var input  = new Target!Input;
+        input.name = p.name.safe();
+        input.type = p.type.safe();
+        uc.input.add(input);
+    }
+
+    if (op.returnType.notNull()) {
+        var output  = new Target!Output;
+        output.type = op.returnType.safe();
+        uc.output   = output;
+    }
+
+    -- Asociar al ApplicationService dueno de esta operacion
+    var ownerService =
+        Source!BusinessService.all.selectOne(s |
+            s.operations.includes(op)
+        );
+
+    if (ownerService.notNull()) {
+        var targetService = serviceMap.get(ownerService);
+        if (targetService.notNull()) {
+            targetService.useCases.add(uc);
+        }
+    }
+}
+
+/*****************************************************************
+ * SERVICE -> PORT LINK
+ *****************************************************************/
+
+rule ServicePortLinkRule
+transform bs : Source!BusinessService
+to spl : Target!ServicePortLink {
+
+    var service = serviceMap.get(bs);
+    var port    = portMap.get(bs);
+
+    if (service.notNull()) { spl.service = service; }
+    if (port.notNull())    { spl.port    = port;    }
+
+    -- FIX: agregar al Hexagon como contenedor raiz
+    if (hexagon.notNull()) {
+        hexagon.servicePortLinks.add(spl);
+    }
+}
+
+/*****************************************************************
+ * SERVICE -> AGGREGATE LINK
+ *****************************************************************/
+
+rule AggregateServiceLinkRule
+transform bs : Source!BusinessService
+to sal : Target!ServiceAggregateLink {
+
+    var service = serviceMap.get(bs);
+    if (service.notNull()) { sal.service = service; }
+
+    -- FIX: nombre correcto del campo en el metamodelo fuente: 'concepts'
+    if (bs.concepts.notNull()) {
+        for (c in bs.concepts.select(x | x.notNull())) {
+            var agg = aggregateMap.get(c);
+            if (agg.notNull()) {
+                sal.aggregates.add(agg);
+            }
+        }
+    }
+
+    -- FIX: agregar al Hexagon como contenedor raiz
+    if (hexagon.notNull()) {
+        hexagon.serviceAggregateLinks.add(sal);
+    }
+}
