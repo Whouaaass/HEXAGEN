@@ -1,0 +1,121 @@
+// ============================================================================
+// ETL Transformation: hexagenModel (conceptual) to hexagonalpro (hexagonal_ddd)
+// Transforma un modelo de dominio conceptual a un modelo de Arquitectura Hexagonal (DDD).
+// ============================================================================
+
+// Regla principal: Domain -> Hexagon
+rule Domain2Hexagon
+    transform s : conceptual!Domain
+    to t : hexagonal_ddd!Hexagon {
+        t.name = s.name;
+        
+        // 1. Crear la Capa de Infraestructura
+        t.infrastructure = new hexagonal_ddd!InfrastructureLayer in {
+            name = s.name + '_Infrastructure'
+        };
+        
+        // 2. Crear la Capa de Aplicación
+        var appLayer := new hexagonal_ddd!ApplicationLayer in {
+            name = s.name + '_Application'
+        };
+        t.application = appLayer;
+        
+        // 3. Asignar el DomainCore desde el primer SubDomain, o crear uno por defecto
+        if (s.subDomains->notEmpty()) {
+            t.domain = s.subDomains.first().equivalent();
+        } else {
+            t.domain = new hexagonal_ddd!DomainCore in {
+                name = s.name + '_DomainCore'
+            };
+        }
+        
+        // 4. Procesar BusinessServices para crear ApplicationServices y DomainServices
+        // (Manejamos la relación 1 a muchos manualmente aquí)
+        var allServices := s.subDomains.businessServices.flatten();
+        for (bs in allServices) {
+            // Crear ApplicationService
+            var appService := new hexagonal_ddd!ApplicationService in {
+                name = bs.name
+            };
+            appLayer.services.add(appService);
+            
+            // Crear DomainService correspondiente
+            var domService := new hexagonal_ddd!DomainService in {
+                name = bs.name
+            };
+            t.domain.domainServices.add(domService);
+            
+            // Procesar Operations para crear UseCases y DomainOperations
+            for (op in bs.operations) {
+                var useCase := new hexagonal_ddd!UseCase in {
+                    name = op.name
+                };
+                appService.useCases.add(useCase);
+                
+                // Mapear Parameters a UseCase input (como Attributes)
+                for (param in op.parameters) {
+                    var inputAttr := new hexagonal_ddd!Attribute in {
+                        name = param.name;
+                        type = param.type
+                    };
+                    useCase.input.add(inputAttr);
+                }
+                
+                // Mapear returnType a UseCase output (como Attribute) si no es void
+                if (op.returnType <> null and op.returnType <> 'void' and op.returnType <> '') {
+                    var outputAttr := new hexagonal_ddd!Attribute in {
+                        name = 'result';
+                        type = op.returnType
+                    };
+                    useCase.output.add(outputAttr);
+                }
+                
+                // Crear DomainOperation
+                var domOp := new hexagonal_ddd!DomainOperation in {
+                    name = op.name;
+                    returnType = op.returnType
+                };
+                domService.operations.add(domOp);
+            }
+        }
+    }
+
+// Regla: SubDomain -> DomainCore
+rule SubDomain2DomainCore
+    transform s : conceptual!SubDomain
+    to t : hexagonal_ddd!DomainCore {
+        t.name = s.name;
+        
+        // Mapear Concepts a Entities y ValueObjects a ValueObjects, 
+        // y añadirlos a la lista de objetos del DomainCore
+        t.objects = s.concepts.collect(c | c.equivalent())
+                     ->union(s.valueObjects.collect(vo | vo.equivalent()));
+    }
+
+// Regla: Concept -> Entity
+rule Concept2Entity
+    transform s : conceptual!Concept
+    to t : hexagonal_ddd!Entity {
+        t.name = s.name;
+        t.values = s.attributes.collect(a | a.equivalent());
+    }
+
+// Regla: ValueObject -> ValueObject
+rule ValueObject2ValueObject
+    transform s : conceptual!ValueObject
+    to t : hexagonal_ddd!ValueObject {
+        t.name = s.name;
+        t.values = s.attributes.collect(a | a.equivalent());
+    }
+
+// Regla: Attribute -> Attribute
+rule Attribute2Attribute
+    transform s : conceptual!Attribute
+    to t : hexagonal_ddd!Attribute {
+        t.name = s.name;
+        t.type = s.type;
+    }
+
+// NOTA: Las clases 'Relationship', 'Port', 'Adapter', 'ExternalSystem' y 'HexagonLink' 
+// no tienen un equivalente semántico directo en esta transformación y se omiten 
+// para mantener la integridad del modelo hexagonal generado.

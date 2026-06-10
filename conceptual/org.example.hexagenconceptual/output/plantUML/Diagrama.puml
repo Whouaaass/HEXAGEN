@@ -5,6 +5,12 @@ skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 
 package "CatalogManagement" {
+  class "BookStatus" as CatalogManagement_BookStatus {
+    String AVAILABLE
+    String LOANED
+    String RESERVED
+    String MAINTENANCE
+  }
   class "Book" as CatalogManagement_Book {
     String isbn
     String title
@@ -44,6 +50,23 @@ package "CatalogManagement" {
   }
 }
 package "LoanManagement" {
+  class "UserStatus" as LoanManagement_UserStatus {
+    String ACTIVE
+    String SUSPENDED
+    String BLOCKED
+  }
+  class "ReservationStatus" as LoanManagement_ReservationStatus {
+    String PENDING
+    String AVAILABLE
+    String FULFILLED
+    String CANCELLED
+    String EXPIRED
+  }
+  class "NotificationChannel" as LoanManagement_NotificationChannel {
+    String EMAIL
+    String SMS
+    String PUSH
+  }
   class "User" as LoanManagement_User {
     String userId
     String name
@@ -58,12 +81,14 @@ package "LoanManagement" {
     LocalDate dueDate
     LocalDate returnDate
     BigDecimal fineAmount
+    String bookIsbn
   }
   class "Reservation" as LoanManagement_Reservation {
     String reservationId
     LocalDate reservationDate
     LocalDate expiryDate
     ReservationStatus status
+    String bookIsbn
   }
 
   class "Money (VO)" as LoanManagement_Money {
@@ -94,12 +119,19 @@ package "LoanManagement" {
   }
 }
 package "FineManagement" {
+  class "FineStatus" as FineManagement_FineStatus {
+    String PENDING
+    String PAID
+    String WAIVED
+    String OVERDUE
+  }
   class "Fine" as FineManagement_Fine {
     String fineId
     BigDecimal amount
     LocalDate issueDate
     LocalDate paidDate
     FineStatus status
+    String loanId
   }
 
   class "FineCalculation (VO)" as FineManagement_FineCalculation {
@@ -111,9 +143,17 @@ package "FineManagement" {
   interface "FineService" as FineManagement_FineService {
         {method} FineCalculation calculateFine(LocalDate dueDate, LocalDate returnDate)
         {method} Fine issueFine(String loanId, BigDecimal amount)
+        {method} Boolean payFine(String fineId, Money payment)
   }
 }
 
 ' ========================================
 ' RELATIONSHIPS
 ' ========================================
+CatalogManagement_Book --> CatalogManagement_Author : book_written_by_author
+CatalogManagement_Book --> CatalogManagement_Category : book_belongs_to_category
+LoanManagement_User *-- LoanManagement_Loan : user_has_loans
+LoanManagement_User *-- LoanManagement_Reservation : user_has_reservations
+LoanManagement_Loan --> CatalogManagement_Book : loan_references_book
+LoanManagement_Reservation --> CatalogManagement_Book : reservation_for_book
+FineManagement_Fine --> LoanManagement_Loan : fine_applied_to_loan

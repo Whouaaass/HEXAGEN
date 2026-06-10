@@ -1,0 +1,87 @@
+Eres un experto en Epsilon Transformation Language (ETL) y Eclipse Modeling Framework (EMF).
+
+Necesito que generes una transformación ETL completa que convierta un modelo conceptual 
+(metamodelo: hexagenModel.ecore) a un modelo hexagonal (metamodelo: hexagonalModel.ecore).
+
+=== METAMODELO FUENTE (hexagenModel.ecore) ===
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="hexagen" nsURI="http://www.hexagen.org/conceptual" nsPrefix="conceptual">
+  <eClassifiers xsi:type="ecore:EClass" name="NamedElement" abstract="true">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Domain" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/domain.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="subDomains" upperBound="-1"
+        eType="#//SubDomain" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="SubDomain" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/subDomain.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="concepts" upperBound="-1"
+        eType="#//Concept" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="valueObjects" upperBound="-1"
+        eType="#//ValueObject" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="relationships" upperBound="-1"
+        eType="#//Relationship" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="businessServices" upperBound="-1"
+        eType="#//BusinessService" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Concept" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/entity.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="attributes" upperBound="-1"
+        eType="#//Attribute" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ValueObject" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/valueobject.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="attributes" upperBound="-1"
+        eType="#//Attribute" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Attribute" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/attribute.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="required" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Relationship" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/relationship.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source" eType="#//Concept"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="target" eType="#//Concept"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Parameter" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/parameter.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="required" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="BusinessOperation" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/operation.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="returnType" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parameters" upperBound="-1"
+        eType="#//Parameter" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="BusinessService" eSuperTypes="#//NamedElement">
+    <eAnnotations source="exeed">
+      <details key="classIcon" value="platform:/resource/org.example.hexagenconceptual/icons/service.png"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="operations" upperBound="-1"
+        eType="#//BusinessOperation" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="concepts" upper
+Bound="-1"
+        eType="#//Concept"/>
+  </eClassifiers>
+</ecore:EPackage>

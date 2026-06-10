@@ -10,10 +10,18 @@
   <!-- ========================================
        SUBDOMINIO 1: Gestión de Catálogo
        ======================================== -->
-  <subDomains name="CatalogManagement">
+  <subDomains name="CatalogManagement" xmi:id="sd_catalog">
+    
+    <!-- Enums -->
+    <concepts name="BookStatus">
+      <attributes name="AVAILABLE" type="String" required="true"/>
+      <attributes name="LOANED" type="String" required="true"/>
+      <attributes name="RESERVED" type="String" required="true"/>
+      <attributes name="MAINTENANCE" type="String" required="true"/>
+    </concepts>
     
     <!-- Concepts -->
-    <concepts name="Book">
+    <concepts name="Book" xmi:id="book">
       <attributes name="isbn" type="String" required="true"/>
       <attributes name="title" type="String" required="true"/>
       <attributes name="author" type="String" required="true"/>
@@ -23,14 +31,14 @@
       <attributes name="availableCopies" type="Integer" required="true"/>
     </concepts>
     
-    <concepts name="Author">
+    <concepts name="Author" xmi:id="author">
       <attributes name="authorId" type="String" required="true"/>
       <attributes name="fullName" type="String" required="true"/>
       <attributes name="birthDate" type="LocalDate" required="false"/>
       <attributes name="nationality" type="String" required="false"/>
     </concepts>
     
-    <concepts name="Category">
+    <concepts name="Category" xmi:id="category">
       <attributes name="categoryId" type="String" required="true"/>
       <attributes name="name" type="String" required="true"/>
       <attributes name="description" type="String" required="false"/>
@@ -48,15 +56,15 @@
       <attributes name="yearRange" type="String" required="false"/>
     </valueObjects>
     
-    <!-- Relationships -->
+    <!-- Relationships dentro del subdominio -->
     <relationships name="book_written_by_author" type="association">
-      <source href="#//subDomains.0/concepts.0"/>
-      <target href="#//subDomains.0/concepts.1"/>
+      <source href="#book"/>
+      <target href="#author"/>
     </relationships>
     
     <relationships name="book_belongs_to_category" type="association">
-      <source href="#//subDomains.0/concepts.0"/>
-      <target href="#//subDomains.0/concepts.2"/>
+      <source href="#book"/>
+      <target href="#category"/>
     </relationships>
     
     <!-- BusinessServices -->
@@ -76,9 +84,9 @@
       <operations name="removeBook" returnType="Boolean">
         <parameters name="isbn" type="String" required="true"/>
       </operations>
-      <concepts href="#//subDomains.0/concepts.0"/>
-      <concepts href="#//subDomains.0/concepts.1"/>
-      <concepts href="#//subDomains.0/concepts.2"/>
+      <concepts href="#book"/>
+      <concepts href="#author"/>
+      <concepts href="#category"/>
     </businessServices>
     
   </subDomains>
@@ -86,10 +94,31 @@
   <!-- ========================================
        SUBDOMINIO 2: Gestión de Usuarios y Préstamos
        ======================================== -->
-  <subDomains name="LoanManagement">
+  <subDomains name="LoanManagement" xmi:id="sd_loan">
+    
+    <!-- Enums -->
+    <concepts name="UserStatus">
+      <attributes name="ACTIVE" type="String" required="true"/>
+      <attributes name="SUSPENDED" type="String" required="true"/>
+      <attributes name="BLOCKED" type="String" required="true"/>
+    </concepts>
+    
+    <concepts name="ReservationStatus">
+      <attributes name="PENDING" type="String" required="true"/>
+      <attributes name="AVAILABLE" type="String" required="true"/>
+      <attributes name="FULFILLED" type="String" required="true"/>
+      <attributes name="CANCELLED" type="String" required="true"/>
+      <attributes name="EXPIRED" type="String" required="true"/>
+    </concepts>
+    
+    <concepts name="NotificationChannel">
+      <attributes name="EMAIL" type="String" required="true"/>
+      <attributes name="SMS" type="String" required="true"/>
+      <attributes name="PUSH" type="String" required="true"/>
+    </concepts>
     
     <!-- Concepts -->
-    <concepts name="User">
+    <concepts name="User" xmi:id="user">
       <attributes name="userId" type="String" required="true"/>
       <attributes name="name" type="String" required="true"/>
       <attributes name="email" type="String" required="true"/>
@@ -98,19 +127,21 @@
       <attributes name="borrowedCount" type="Integer" required="true"/>
     </concepts>
     
-    <concepts name="Loan">
+    <concepts name="Loan" xmi:id="loan">
       <attributes name="loanId" type="String" required="true"/>
       <attributes name="loanDate" type="LocalDate" required="true"/>
       <attributes name="dueDate" type="LocalDate" required="true"/>
       <attributes name="returnDate" type="LocalDate" required="false"/>
       <attributes name="fineAmount" type="BigDecimal" required="false"/>
+      <attributes name="bookIsbn" type="String" required="true"/>
     </concepts>
     
-    <concepts name="Reservation">
+    <concepts name="Reservation" xmi:id="reservation">
       <attributes name="reservationId" type="String" required="true"/>
       <attributes name="reservationDate" type="LocalDate" required="true"/>
       <attributes name="expiryDate" type="LocalDate" required="true"/>
       <attributes name="status" type="ReservationStatus" required="true"/>
+      <attributes name="bookIsbn" type="String" required="true"/>
     </concepts>
     
     <!-- ValueObjects -->
@@ -125,25 +156,26 @@
       <attributes name="message" type="String" required="true"/>
     </valueObjects>
     
-    <!-- Relationships -->
-    <relationships name="loan_borrowed_by_user" type="composition">
-      <source href="#//subDomains.1/concepts.0"/>
-      <target href="#//subDomains.1/concepts.1"/>
+    <!-- Relationships dentro del subdominio -->
+    <relationships name="user_has_loans" type="composition">
+      <source href="#user"/>
+      <target href="#loan"/>
     </relationships>
     
+    <relationships name="user_has_reservations" type="composition">
+      <source href="#user"/>
+      <target href="#reservation"/>
+    </relationships>
+    
+    <!-- Relaciones cruzadas con otros subdominios (solo referencias por ID) -->
     <relationships name="loan_references_book" type="association">
-      <source href="#//subDomains.0/concepts.0"/>
-      <target href="#//subDomains.1/concepts.1"/>
-    </relationships>
-    
-    <relationships name="reservation_made_by_user" type="composition">
-      <source href="#//subDomains.1/concepts.0"/>
-      <target href="#//subDomains.1/concepts.2"/>
+      <source href="#loan"/>
+      <target href="#book"/>
     </relationships>
     
     <relationships name="reservation_for_book" type="association">
-      <source href="#//subDomains.0/concepts.0"/>
-      <target href="#//subDomains.1/concepts.2"/>
+      <source href="#reservation"/>
+      <target href="#book"/>
     </relationships>
     
     <!-- BusinessServices -->
@@ -162,9 +194,10 @@
       <operations name="checkOverdue" returnType="List&lt;Loan&gt;">
         <parameters name="referenceDate" type="LocalDate" required="true"/>
       </operations>
-      <concepts href="#//subDomains.1/concepts.0"/>
-      <concepts href="#//subDomains.1/concepts.1"/>
-      <concepts href="#//subDomains.0/concepts.0"/>
+      <!-- Solo concepts de LoanManagement -->
+      <concepts href="#user"/>
+      <concepts href="#loan"/>
+      <concepts href="#reservation"/>
     </businessServices>
     
     <businessServices name="UserService">
@@ -180,7 +213,10 @@
         <parameters name="userId" type="String" required="true"/>
         <parameters name="reason" type="String" required="true"/>
       </operations>
-      <concepts href="#//subDomains.1/concepts.0"/>
+      <!-- Solo concepts de LoanManagement -->
+      <concepts href="#user"/>
+      <concepts href="#loan"/>
+      <concepts href="#reservation"/>
     </businessServices>
     
     <businessServices name="ReservationService">
@@ -195,9 +231,10 @@
         <parameters name="reservationId" type="String" required="true"/>
         <parameters name="notification" type="Notification" required="true"/>
       </operations>
-      <concepts href="#//subDomains.1/concepts.0"/>
-      <concepts href="#//subDomains.1/concepts.2"/>
-      <concepts href="#//subDomains.0/concepts.0"/>
+      <!-- Solo concepts de LoanManagement -->
+      <concepts href="#user"/>
+      <concepts href="#loan"/>
+      <concepts href="#reservation"/>
     </businessServices>
     
   </subDomains>
@@ -205,27 +242,40 @@
   <!-- ========================================
        SUBDOMINIO 3: Gestión de Multas
        ======================================== -->
-  <subDomains name="FineManagement">
+  <subDomains name="FineManagement" xmi:id="sd_fine">
     
-    <concepts name="Fine">
+    <!-- Enums -->
+    <concepts name="FineStatus">
+      <attributes name="PENDING" type="String" required="true"/>
+      <attributes name="PAID" type="String" required="true"/>
+      <attributes name="WAIVED" type="String" required="true"/>
+      <attributes name="OVERDUE" type="String" required="true"/>
+    </concepts>
+    
+    <!-- Concepts -->
+    <concepts name="Fine" xmi:id="fine">
       <attributes name="fineId" type="String" required="true"/>
       <attributes name="amount" type="BigDecimal" required="true"/>
       <attributes name="issueDate" type="LocalDate" required="true"/>
       <attributes name="paidDate" type="LocalDate" required="false"/>
       <attributes name="status" type="FineStatus" required="true"/>
+      <attributes name="loanId" type="String" required="true"/>
     </concepts>
     
+    <!-- ValueObjects -->
     <valueObjects name="FineCalculation">
       <attributes name="daysOverdue" type="Integer" required="true"/>
       <attributes name="dailyRate" type="BigDecimal" required="true"/>
       <attributes name="total" type="BigDecimal" required="true"/>
     </valueObjects>
     
+    <!-- Relaciones cruzadas con LoanManagement -->
     <relationships name="fine_applied_to_loan" type="association">
-      <source href="#//subDomains.1/concepts.1"/>
-      <target href="#//subDomains.2/concepts.0"/>
+      <source href="#fine"/>
+      <target href="#loan"/>
     </relationships>
     
+    <!-- BusinessServices -->
     <businessServices name="FineService">
       <operations name="calculateFine" returnType="FineCalculation">
         <parameters name="dueDate" type="LocalDate" required="true"/>
@@ -235,8 +285,12 @@
         <parameters name="loanId" type="String" required="true"/>
         <parameters name="amount" type="BigDecimal" required="true"/>
       </operations>
-      <concepts href="#//subDomains.2/concepts.0"/>
-      <concepts href="#//subDomains.1/concepts.1"/>
+      <operations name="payFine" returnType="Boolean">
+        <parameters name="fineId" type="String" required="true"/>
+        <parameters name="payment" type="Money" required="true"/>
+      </operations>
+      <!-- Solo concepts de FineManagement -->
+      <concepts href="#fine"/>
     </businessServices>
     
   </subDomains>
