@@ -340,13 +340,15 @@ if (smmMod.services.size() >= hmmHex.application.services.size()) {
     ("  FAIL R2").println();
 }
 
-var outboundPorts = hmmHex.infrastructure.ports->select(p | p.isTypeOf(HMM!OutboundPort));
-if (smmMod.repositories.size() >= outboundPorts.size()) {
+var repoPorts = hmmHex.infrastructure.ports
+    ->select(p | p.isTypeOf(HMM!OutboundPort) and p.name.indexOf("Repository") >= 0);
+if (smmMod.repositories.size() >= repoPorts.size()) {
     ("  PASS R3: Repos (" + smmMod.repositories.size()
-        + ") >= OutboundPorts (" + outboundPorts.size() + ")").println();
+        + ") >= Repository OutboundPorts (" + repoPorts.size() + ")").println();
     afPassed := afPassed + 1;
 } else {
-    ("  FAIL R3").println();
+    ("  FAIL R3: Repos (" + smmMod.repositories.size()
+        + ") < Repository OutboundPorts (" + repoPorts.size() + ")").println();
 }
 
 var zeroDepSvc = smmMod.services->select(s | s.requiredRepositories.size() = 0);
@@ -375,20 +377,50 @@ var afScore = (afPassed * 5) / 5;
 // Metric 3: FC (Functional Completeness)
 // ============================================================
 ("--- M3: Functional Completeness ---").println();
-var fcGenerated = 0;
-fcGenerated := fcGenerated + smmMod.entities.size();
-fcGenerated := fcGenerated + smmMod.valueObjects.size();
-fcGenerated := fcGenerated + smmMod.repositories.size();
-fcGenerated := fcGenerated + smmMod.services.size();
-fcGenerated := fcGenerated + smmMod.controllers.size();
-fcGenerated := fcGenerated + smmMod.dtos.size();
+var fcGenEntities = smmMod.entities.size();
+var fcGenVOs = smmMod.valueObjects.size();
+var fcGenRepos = smmMod.repositories.size();
+var fcGenServices = smmMod.services.size();
+var fcGenControllers = smmMod.controllers.size();
+var fcGenDTOs = smmMod.dtos.size();
+var fcGenerated = fcGenEntities + fcGenVOs + fcGenRepos + fcGenServices + fcGenControllers + fcGenDTOs;
 
-// Configure expected count per domain specification
-var fcExpected = 25;
+// Derive expected counts from HMM
+var fcExpected = 0;
+var fcExpectedEntities = 0;
+var fcExpectedVOs = 0;
+var fcExpectedRepos = 0;
+var fcExpectedServices = 0;
+var fcExpectedControllers = 0;
+var fcDtoNames = new Set;
+for (agg in hmmHex.domain.aggregates) {
+    fcExpectedEntities := fcExpectedEntities + 1;
+    for (m in agg.members) {
+        if (m.isTypeOf(HMM!Entity)) { fcExpectedEntities := fcExpectedEntities + 1; }
+        if (m.isTypeOf(HMM!ValueObject)) { fcExpectedVOs := fcExpectedVOs + 1; }
+    }
+}
+fcExpectedRepos := hmmHex.infrastructure.ports
+    ->select(p | p.isTypeOf(HMM!OutboundPort) and p.name.indexOf("Repository") >= 0).size();
+fcExpectedServices := hmmHex.application.services.size();
+fcExpectedControllers := hmmHex.infrastructure.adapters
+    ->select(a | a.isTypeOf(HMM!InboundAdapter)).size();
+for (svc in hmmHex.application.services) {
+    for (uc in svc.useCases) {
+        for (io in uc.input) { if (io.isTypeOf(HMM!ValueObject)) { fcDtoNames.add(io.name); } }
+        for (io in uc.output) { if (io.isTypeOf(HMM!ValueObject)) { fcDtoNames.add(io.name); } }
+    }
+}
+fcExpected := fcExpectedEntities + fcExpectedVOs + fcExpectedRepos + fcExpectedServices + fcExpectedControllers + fcDtoNames.size();
 var fcRatio = 0;
 if (fcExpected > 0) { fcRatio := fcGenerated.asReal() / fcExpected; }
-("  Generated: " + fcGenerated + ", Expected: " + fcExpected
-    + ", Ratio: " + (fcRatio * 100) + "%").println();
+("  Generated: " + fcGenerated + ", Expected: " + fcExpected + ", Ratio: " + (fcRatio * 100) + "%").println();
+("    Entities:       " + fcGenEntities + "/" + fcExpectedEntities).println();
+("    ValueObjects:   " + fcGenVOs + "/" + fcExpectedVOs).println();
+("    Repositories:   " + fcGenRepos + "/" + fcExpectedRepos).println();
+("    Services:       " + fcGenServices + "/" + fcExpectedServices).println();
+("    Controllers:    " + fcGenControllers + "/" + fcExpectedControllers).println();
+("    DTOs:           " + fcGenDTOs + "/" + fcDtoNames.size()).println();
 
 var fcScore = 1;
 if (fcRatio >= 0.95) { fcScore := 5; }

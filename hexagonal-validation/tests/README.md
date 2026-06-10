@@ -132,7 +132,7 @@ Type (abstract)
 ### Rules
 
 | # | Rule | Weight | Check |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | R1 | Controllers generated from InboundAdapters | 1 | SMM `controllers.size` >= HMM `InboundAdapter` count |
 | R2 | Services generated from ApplicationServices | 1 | SMM `services.size` >= HMM `ApplicationService` count |
 | R3 | Repositories generated from OutboundPorts | 1 | SMM `repositories.size` >= HMM `OutboundPort` count |

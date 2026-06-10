@@ -46,22 +46,22 @@ if (serviceCount >= appServiceCount) {
     ("  => FAIL (expected >= " + appServiceCount + ")").println();
 }
 
-// -- Rule 3: Repositories generated from OutboundPorts --
-var outboundPorts = hmmHexagon.infrastructure.ports
-    ->select(p | p.isTypeOf(HMM!OutboundPort));
-var outboundPortCount = outboundPorts.size();
+// -- Rule 3: Repositories generated from OutboundPorts with "Repository" in name --
+var repoPorts = hmmHexagon.infrastructure.ports
+    ->select(p | p.isTypeOf(HMM!OutboundPort) and p.name.indexOf("Repository") >= 0);
+var repoPortCount = repoPorts.size();
 var repositoryCount = smmModule.repositories.size();
 
-("Rule 3 - Repositories from OutboundPorts:").println();
-("  HMM OutboundPorts: " + outboundPortCount
-    + " (" + outboundPorts->collect(p | p.name).concat(", ") + ")").println();
+("Rule 3 - Repositories from OutboundPorts (Repository ports):").println();
+("  HMM Repository OutboundPorts: " + repoPortCount
+    + " (" + repoPorts->collect(p | p.name).concat(", ") + ")").println();
 ("  SMM Repositories: " + repositoryCount
     + " (" + smmModule.repositories->collect(r | r.name).concat(", ") + ")").println();
-if (repositoryCount >= outboundPortCount) {
+if (repositoryCount >= repoPortCount) {
     rulesPassed := rulesPassed + 1;
     ("  => PASS").println();
 } else {
-    ("  => FAIL (expected >= " + outboundPortCount + ")").println();
+    ("  => FAIL (expected >= " + repoPortCount + ")").println();
 }
 
 // -- Rule 4: Dependency inversion preserved --

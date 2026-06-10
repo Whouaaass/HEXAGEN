@@ -1,0 +1,413 @@
+rule Hexagon2Application
+    transform h : HMM!Hexagon
+    to a : SMM!Application {
+
+    a.name        = h.name;
+    a.basePackage = "com.example." + h.name.toLowerCase();
+    a.javaVersion = "21";
+    a.serverPort  = "8080";
+
+    a.modules = h.application.services.equivalent();
+}
+
+rule ApplicationService2Modules
+    transform svc : HMM!ApplicationService
+    to mod : SMM!Module {
+
+    mod.name = svc.name.stripSuffix("Service");
+
+    var linkedAggregates = svc.linkedAggregates();
+
+    mod.entities     = linkedAggregates.collect(a | a.equivalent("AggregateRoot2Entity"));
+    mod.repositories = linkedAggregates.collect(a | a.equivalent("AggregateRoot2Repository"));
+
+    var hadEntities = linkedAggregates
+        .collect(a | a.members.select(m | m.isKindOf(HMM!Entity)))
+        .flatten();
+    mod.entities.addAll(hadEntities.equivalent());
+
+    var hadVOs = linkedAggregates
+        .collect(a | a.members.select(m | m.isKindOf(HMM!ValueObject)))
+        .flatten();
+    mod.valueObjects = hadVOs.equivalent();
+
+    var linkedDomainServices = svc.linkedDomainServices();
+    mod.services = linkedDomainServices.equivalent("DomainService2Service");
+
+    mod.services.add(svc.equivalent("ApplicationService2Service"));
+
+    var controllers = svc.linkedInboundAdapters();
+    mod.controllers = controllers.equivalent();
+
+    var relevantEvents = svc.linkedDomainEvents();
+    mod.dtos = relevantEvents.equivalent("DomainEvent2Dto");
+}
+
+@lazy
+rule AggregateRoot2Entity
+    transform agg : HMM!AggregateRoot
+    to ent : SMM!Entity {
+
+    ent.name = agg.name;
+
+    var idAttr  = new SMM!Attribute;
+    var idType  = new SMM!PrimitiveType;
+    idType.kind = SMM!PrimitiveKind#UUID;
+    idAttr.name = agg.name.firstToLowerCase() + "Id";
+    idAttr.type = idType;
+    idAttr.isId = true;
+
+    var idType2  = new SMM!PrimitiveType;
+    idType2.kind = SMM!PrimitiveKind#UUID;
+    ent.idType = idType2;
+
+    ent.attributes.add(idAttr);
+
+    var scalarMembers = agg.members.select(m | m.isKindOf(HMM!Attribute));
+    for (attr in scalarMembers) {
+        var smmAttr = attr.equivalent("HexAttr2SmmAttr");
+        if (smmAttr.isDefined()) {
+            ent.attributes.add(smmAttr);
+        }
+    }
+}
+
+@lazy
+rule AggregateRoot2Repository
+    transform agg : HMM!AggregateRoot
+    to repo : SMM!Repository {
+
+    repo.name = agg.name + "Repository";
+    repo.entityType = agg.equivalent("AggregateRoot2Entity");
+
+    var idType  = new SMM!PrimitiveType;
+    idType.kind = SMM!PrimitiveKind#UUID;
+    repo.idType = idType;
+
+    repo.methods.add(buildMethod("findById",   primitiveType(SMM!PrimitiveKind#UUID),    Sequence{ buildParam("id", SMM!PrimitiveKind#UUID,    SMM!ParamKind#PATH) }));
+    repo.methods.add(buildMethod("findAll",    collectionReturnType(agg.name),           Sequence{}));
+    repo.methods.add(buildMethod("save",       customReturnType(agg.name),               Sequence{ buildParam("entity", agg.name,              SMM!ParamKind#BODY) }));
+    repo.methods.add(buildMethod("deleteById", primitiveType(SMM!PrimitiveKind#BOOLEAN), Sequence{ buildParam("id", SMM!PrimitiveKind#UUID,    SMM!ParamKind#PATH) }));
+}
+
+@lazy
+rule HadEntity2SmmEntity
+    transform he : HMM!Entity
+    to se : SMM!Entity {
+
+    se.name = he.name;
+
+    var idType  = new SMM!PrimitiveType;
+    idType.kind = SMM!PrimitiveKind#UUID;
+    se.idType = idType;
+
+    for (v in he.values) {
+        var smmAttr = v.equivalent("HexAttr2SmmAttr");
+        if (smmAttr.isDefined()) {
+            se.attributes.add(smmAttr);
+        }
+    }
+}
+
+@lazy
+rule HadVO2SmmVO
+    transform hvo : HMM!ValueObject
+    to svo : SMM!ValueObject {
+
+    svo.name = hvo.name;
+
+    for (v in hvo.values) {
+        var smmAttr = v.equivalent("HexAttr2SmmAttr");
+        if (smmAttr.isDefined()) {
+            svo.attributes.add(smmAttr);
+        }
+    }
+}
+
+@lazy
+rule DomainService2Service
+    transform ds : HMM!DomainService
+    to svc : SMM!Service {
+
+    svc.name = ds.name;
+
+    for (op in ds.operations) {
+        var m      = new SMM!Method;
+        m.name     = op.name;
+        m.returnType = resolveTypeFromString(op.returnType);
+        svc.methods.add(m);
+    }
+}
+
+@lazy
+rule ApplicationService2Service
+    transform as_ : HMM!ApplicationService
+    to svc : SMM!Service {
+
+    svc.name = as_.name;
+
+    var linkedAggregates = as_.linkedAggregates();
+    svc.requiredRepositories =
+        linkedAggregates.collect(a | a.equivalent("AggregateRoot2Repository"));
+
+    for (uc in as_.useCases) {
+        var m  = new SMM!Method;
+        m.name = uc.name.firstToLowerCase();
+
+        if (uc.output.size() > 0) {
+            var firstOut = uc.output.first();
+            if (firstOut.isKindOf(HMM!Attribute)) {
+                m.returnType = resolveTypeFromString(firstOut.type);
+            } else {
+                m.returnType = resolveTypeFromString("Object");
+            }
+        } else {
+            m.returnType = resolveTypeFromString("void");
+        }
+
+        for (inp in uc.input) {
+            if (inp.isKindOf(HMM!Attribute)) {
+                var p = new SMM!Parameter;
+                p.name = inp.name;
+                p.type = resolveTypeFromString(inp.type);
+                p.kind = inferParamKind(inp.name);
+                m.parameters.add(p);
+            }
+        }
+        svc.methods.add(m);
+    }
+}
+
+@lazy
+rule InboundAdapter2Controller
+    transform ia : HMM!InboundAdapter
+    to ctrl : SMM!Controller {
+
+    ctrl.name     = ia.name;
+    ctrl.basePath = "/" + ia.name.stripSuffix("RestController")
+                              .stripSuffix("Controller")
+                              .toLowerCase() + "s";
+
+    var ownerSvc = ia.ownerService();
+    if (ownerSvc.isDefined()) {
+        ctrl.service = ownerSvc.equivalent("ApplicationService2Service");
+
+        for (uc in ownerSvc.useCases) {
+            ctrl.endpoints.add(buildEndpoint(uc));
+        }
+    }
+}
+
+@lazy
+rule DomainEvent2Dto
+    transform evt : HMM!DomainEvent
+    to dto : SMM!Dto {
+
+    dto.name = evt.name + "Dto";
+
+    for (attr in evt.payload) {
+        var smmAttr = attr.equivalent("HexAttr2SmmAttr");
+        if (smmAttr.isDefined()) {
+            dto.attributes.add(smmAttr);
+        }
+    }
+}
+
+@lazy
+rule HexAttr2SmmAttr
+    transform ha : HMM!Attribute
+    to sa : SMM!Attribute {
+
+    sa.name       = ha.name;
+    sa.type       = resolveTypeFromString(ha.type);
+    sa.isNullable = false;
+    sa.isId       = ha.name.endsWith("Id") and ha.type = "UUID";
+}
+
+operation String stripSuffix(suffix : String) : String {
+    if (self.endsWith(suffix)) {
+        return self.substring(0, self.length() - suffix.length());
+    }
+    return self;
+}
+
+operation String firstToLowerCase() : String {
+    if (self.length() = 0) { return self; }
+    return self.substring(0, 1).toLowerCase() + self.substring(1);
+}
+
+operation resolveTypeFromString(typeName : String) : SMM!Type {
+    var t = typeName.trim();
+    if (t = "UUID")     { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#UUID;    return p; }
+    if (t = "String")   { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#STRING;  return p; }
+    if (t = "Integer")  { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#INTEGER; return p; }
+    if (t = "Long")     { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#LONG;    return p; }
+    if (t = "Boolean")  { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#BOOLEAN; return p; }
+    if (t = "Double" or t = "Decimal") { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#DOUBLE; return p; }
+    if (t = "DateTime") { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#DATE;    return p; }
+    if (t = "void")     { var p = new SMM!PrimitiveType; p.kind = SMM!PrimitiveKind#STRING;  return p; }
+    if (t.endsWith("List") or t.endsWith("Set")) {
+        var col       = new SMM!CollectionType;
+        col.collection = SMM!CollectionKind#LIST;
+        var inner     = new SMM!PrimitiveType;
+        inner.kind    = SMM!PrimitiveKind#STRING;
+        col.innerType = inner;
+        return col;
+    }
+    var ct = new SMM!CustomType;
+    return ct;
+}
+
+operation primitiveType(kind : Any) : SMM!PrimitiveType {
+    var p = new SMM!PrimitiveType;
+    p.kind = kind;
+    return p;
+}
+
+operation collectionReturnType(entityName : String) : SMM!CollectionType {
+    var col       = new SMM!CollectionType;
+    col.collection = SMM!CollectionKind#LIST;
+    var inner     = new SMM!CustomType;
+    col.innerType = inner;
+    return col;
+}
+
+operation customReturnType(entityName : String) : SMM!CustomType {
+    var ct = new SMM!CustomType;
+    return ct;
+}
+
+operation buildMethod(mName : String, retType : SMM!Type, params : Sequence) : SMM!Method {
+    var m        = new SMM!Method;
+    m.name       = mName;
+    m.returnType = retType;
+    for (p in params) { m.parameters.add(p); }
+    return m;
+}
+
+operation buildParam(pName : String, typeRef : Any, kind : Any) : SMM!Parameter {
+    var p  = new SMM!Parameter;
+    p.name = pName;
+    p.kind = kind;
+    if (typeRef.isKindOf(SMM!Type)) {
+        p.type = typeRef;
+    } else {
+        var ct = new SMM!CustomType;
+        p.type = ct;
+    }
+    return p;
+}
+
+operation inferParamKind(paramName : String) : Any {
+    if (paramName.endsWith("Id") or paramName = "id") {
+        return SMM!ParamKind#PATH;
+    }
+    return SMM!ParamKind#BODY;
+}
+
+operation buildEndpoint(uc : HMM!UseCase) : SMM!Endpoint {
+    var ep   = new SMM!Endpoint;
+    ep.name  = uc.name.firstToLowerCase();
+
+    var lcName = uc.name.toLowerCase();
+    if (lcName.startsWith("get") or lcName.startsWith("find") or
+        lcName.startsWith("search") or lcName.startsWith("check") or
+        lcName.startsWith("list") or lcName.startsWith("view")) {
+        ep.httpMethod = SMM!HttpMethod#GET;
+        ep.path       = "/" + uc.name.firstToLowerCase();
+    } else if (lcName.startsWith("create") or lcName.startsWith("request") or
+               lcName.startsWith("add")    or lcName.startsWith("register") or
+               lcName.startsWith("borrow")) {
+        ep.httpMethod = SMM!HttpMethod#POST;
+        ep.path       = "/";
+    } else if (lcName.startsWith("update") or lcName.startsWith("renew") or
+               lcName.startsWith("reschedule")) {
+        ep.httpMethod = SMM!HttpMethod#PUT;
+        ep.path       = "/{id}";
+    } else if (lcName.startsWith("delete") or lcName.startsWith("cancel") or
+               lcName.startsWith("remove")) {
+        ep.httpMethod = SMM!HttpMethod#DELETE;
+        ep.path       = "/{id}";
+    } else if (lcName.startsWith("return") or lcName.startsWith("approve") or
+               lcName.startsWith("complete")) {
+        ep.httpMethod = SMM!HttpMethod#PATCH;
+        ep.path       = "/{id}/" + uc.name.firstToLowerCase();
+    } else {
+        ep.httpMethod = SMM!HttpMethod#POST;
+        ep.path       = "/" + uc.name.firstToLowerCase();
+    }
+
+    if (uc.output.size() > 0) {
+        var firstOut = uc.output.first();
+        if (firstOut.isKindOf(HMM!Attribute)) {
+            ep.returnType = resolveTypeFromString(firstOut.type);
+        } else {
+            ep.returnType = resolveTypeFromString("Object");
+        }
+    } else {
+        ep.returnType = resolveTypeFromString("void");
+    }
+
+    for (inp in uc.input) {
+        if (inp.isKindOf(HMM!Attribute)) {
+            var p = new SMM!Parameter;
+            p.name = inp.name;
+            p.type = resolveTypeFromString(inp.type);
+            p.kind = inferParamKind(inp.name);
+            ep.parameters.add(p);
+        }
+    }
+
+    return ep;
+}
+
+operation HMM!ApplicationService linkedAggregates() : Sequence {
+    var hexagon = HMM!Hexagon.allInstances().first();
+    return hexagon.links
+        .select(l | l.isKindOf(HMM!ServiceAggregateLink) and l.source = self)
+        .collect(l | l.target);
+}
+
+operation HMM!ApplicationService linkedDomainServices() : Sequence {
+    var hexagon = HMM!Hexagon.allInstances().first();
+    return hexagon.links
+        .select(l | l.isKindOf(HMM!ServiceDomainServiceLink) and l.source = self)
+        .collect(l | l.target);
+}
+
+operation HMM!ApplicationService linkedInboundAdapters() : Sequence {
+    var hexagon   = HMM!Hexagon.allInstances().first();
+    var myPorts   = hexagon.links
+        .select(l | l.isKindOf(HMM!ServicePortLink) and l.source = self)
+        .collect(l | l.target)
+        .select(p | p.isKindOf(HMM!InboundPort));
+
+    return hexagon.links
+        .select(l | l.isKindOf(HMM!AdapterPortLink)
+                    and myPorts.includes(l.target)
+                    and l.source.isKindOf(HMM!InboundAdapter))
+        .collect(l | l.source);
+}
+
+operation HMM!ApplicationService linkedDomainEvents() : Sequence {
+    var hexagon         = HMM!Hexagon.allInstances().first();
+    var aggregateNames  = self.linkedAggregates().collect(a | a.name.toLowerCase());
+    return hexagon.domain.events.select(e |
+        aggregateNames.exists(aName | e.name.toLowerCase().contains(aName)))
+        .asSequence();
+}
+
+operation HMM!InboundAdapter ownerService() : HMM!ApplicationService {
+    var hexagon  = HMM!Hexagon.allInstances().first();
+    var myPorts  = hexagon.links
+        .select(l | l.isKindOf(HMM!AdapterPortLink) and l.source = self)
+        .collect(l | l.target);
+
+    var services = hexagon.links
+        .select(l | l.isKindOf(HMM!ServicePortLink)
+                    and myPorts.includes(l.target))
+        .collect(l | l.source);
+
+    if (services.size() > 0) { return services.first(); }
+    return null;
+}

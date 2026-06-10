@@ -1,12 +1,13 @@
 // FC: Functional Completeness
 // Counts generated elements and computes ratio against expected.
-// Expected count is configured per domain specification.
+// Expected counts derived from HMM source model (loaded as "HMM").
 // Score: 5 = >=95%, 4 = >=80%, 3 = >=60%, 2 = >=40%, 1 = <40%
 
+// -- Generated counts from SMM --
 var totalGenerated = 0;
-var detail = new Map;
+var genDetail = new Map;
 
-for (app in Application.allInstances()) {
+for (app in SMM!Application.allInstances()) {
     for (mod in app.modules) {
         totalGenerated := totalGenerated + mod.entities.size();
         totalGenerated := totalGenerated + mod.valueObjects.size();
@@ -15,30 +16,65 @@ for (app in Application.allInstances()) {
         totalGenerated := totalGenerated + mod.controllers.size();
         totalGenerated := totalGenerated + mod.dtos.size();
 
-        detail.put("Entities", mod.entities.size());
-        detail.put("ValueObjects", mod.valueObjects.size());
-        detail.put("Repositories", mod.repositories.size());
-        detail.put("Services", mod.services.size());
-        detail.put("Controllers", mod.controllers.size());
-        detail.put("DTOs", mod.dtos.size());
+        genDetail.put("Entities", mod.entities.size());
+        genDetail.put("ValueObjects", mod.valueObjects.size());
+        genDetail.put("Repositories", mod.repositories.size());
+        genDetail.put("Services", mod.services.size());
+        genDetail.put("Controllers", mod.controllers.size());
+        genDetail.put("DTOs", mod.dtos.size());
     }
 }
 
-// Configure these per domain specification:
-var expectedElements = 25;
-var expectedDetail = new Map;
-expectedDetail.put("Entities", 3);
-expectedDetail.put("ValueObjects", 2);
-expectedDetail.put("Repositories", 2);
-expectedDetail.put("Services", 2);
-expectedDetail.put("Controllers", 4);
-expectedDetail.put("DTOs", 12);
+// -- Expected counts from HMM --
+var hmmHex = HMM!Hexagon.allInstances().first();
+var hmmEntities = 0;
+var hmmValueObjects = 0;
+var dtoNames = new Set;
 
+for (agg in hmmHex.domain.aggregates) {
+    hmmEntities := hmmEntities + 1;
+    for (m in agg.members) {
+        if (m.isTypeOf(HMM!Entity)) { hmmEntities := hmmEntities + 1; }
+        if (m.isTypeOf(HMM!ValueObject)) { hmmValueObjects := hmmValueObjects + 1; }
+    }
+}
+
+var hmmRepoPorts = hmmHex.infrastructure.ports
+    ->select(p | p.isTypeOf(HMM!OutboundPort) and p.name.indexOf("Repository") >= 0).size();
+
+var hmmServices = hmmHex.application.services.size();
+
+var hmmControllers = hmmHex.infrastructure.adapters
+    ->select(a | a.isTypeOf(HMM!InboundAdapter)).size();
+
+for (svc in hmmHex.application.services) {
+    for (uc in svc.useCases) {
+        for (io in uc.input) {
+            if (io.isTypeOf(HMM!ValueObject)) { dtoNames.add(io.name); }
+        }
+        for (io in uc.output) {
+            if (io.isTypeOf(HMM!ValueObject)) { dtoNames.add(io.name); }
+        }
+    }
+}
+var hmmDtos = dtoNames.size();
+
+var expectedDetail = new Map;
+expectedDetail.put("Entities", hmmEntities);
+expectedDetail.put("ValueObjects", hmmValueObjects);
+expectedDetail.put("Repositories", hmmRepoPorts);
+expectedDetail.put("Services", hmmServices);
+expectedDetail.put("Controllers", hmmControllers);
+expectedDetail.put("DTOs", hmmDtos);
+
+var expectedElements = hmmEntities + hmmValueObjects + hmmRepoPorts + hmmServices + hmmControllers + hmmDtos;
+
+// -- Report --
 ("--- FC: Functional Completeness ---").println();
-("Generated element counts:").println();
-for (key in detail.keySet()) {
+("Element counts:").println();
+for (key in genDetail.keySet()) {
     var exp = expectedDetail.get(key);
-    var gen = detail.get(key);
+    var gen = genDetail.get(key);
     var pct = 0;
     if (exp > 0) { pct := (gen * 100) / exp; }
     ("  " + key + ": " + gen + "/" + exp + " (" + pct + "%)").println();
