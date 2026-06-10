@@ -346,7 +346,7 @@ Runs all four metrics and produces a unified report like:
 ### From Eclipse
 
 1. Import `hexagonal-validation` into Eclipse (File → Import → Existing Projects)
-2. Expand `tests/runconfigs/`
+2. Expand `runconfigs/`
 3. Right-click a `.launch` file → **Run As** → **Run Configurations**
 4. Select the configuration → **Run**
 

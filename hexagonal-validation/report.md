@@ -1,4 +1,4 @@
-## ETL Transformation model generation results
+## ETL (MDE) Transformation model generation results
 
 ```
 ╔═══════════════════════════════════════════════════════════
