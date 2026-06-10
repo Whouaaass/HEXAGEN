@@ -10,10 +10,17 @@
     javaVersion="21"
     serverPort="8080">
   <modules>
-    <entities>
-      <attributes/>
+    <entities
+        name="entity">
+      <attributes
+          name="attr">
+        <type
+            xsi:type="smm:CustomType"
+            reference="//@modules.0/@valueObjects.0"/>
+      </attributes>
     </entities>
-    <valueObjects>
+    <valueObjects
+        name="valueObject">
       <attributes/>
     </valueObjects>
     <repositories>

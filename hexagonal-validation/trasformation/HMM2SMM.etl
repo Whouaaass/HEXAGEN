@@ -7,40 +7,62 @@ rule Hexagon2Application
     a.javaVersion = "21";
     a.serverPort  = "8080";
 
-    a.modules = h.application.services.equivalent();
-}
+    var mod = new SMM!Module;
+    mod.name = "ApplicationModule";
+    a.modules.add(mod);
 
-rule ApplicationService2Modules
-    transform svc : HMM!ApplicationService
-    to mod : SMM!Module {
+    var allAggregates = h.domain.aggregates;
 
-    mod.name = svc.name.stripSuffix("Service");
+    mod.entities.addAll(allAggregates.collect(a | a.equivalent("AggregateRoot2Entity")));
+    mod.repositories.addAll(allAggregates.collect(a | a.equivalent("AggregateRoot2Repository")));
 
-    var linkedAggregates = svc.linkedAggregates();
+    var allHadEntities = allAggregates
+        .collect(a | a.members.select(m | m.isKindOf(HMM!Entity))).flatten();
+    mod.entities.addAll(allHadEntities.equivalent());
 
-    mod.entities     = linkedAggregates.collect(a | a.equivalent("AggregateRoot2Entity"));
-    mod.repositories = linkedAggregates.collect(a | a.equivalent("AggregateRoot2Repository"));
+    var allHadVOs = allAggregates
+        .collect(a | a.members.select(m | m.isKindOf(HMM!ValueObject))).flatten();
+    mod.valueObjects.addAll(allHadVOs.equivalent());
 
-    var hadEntities = linkedAggregates
-        .collect(a | a.members.select(m | m.isKindOf(HMM!Entity)))
-        .flatten();
-    mod.entities.addAll(hadEntities.equivalent());
-
-    var hadVOs = linkedAggregates
-        .collect(a | a.members.select(m | m.isKindOf(HMM!ValueObject)))
-        .flatten();
-    mod.valueObjects = hadVOs.equivalent();
-
-    var linkedDomainServices = svc.linkedDomainServices();
-    mod.services = linkedDomainServices.equivalent("DomainService2Service");
-
-    mod.services.add(svc.equivalent("ApplicationService2Service"));
-
-    var controllers = svc.linkedInboundAdapters();
-    mod.controllers = controllers.equivalent();
-
-    var relevantEvents = svc.linkedDomainEvents();
-    mod.dtos = relevantEvents.equivalent("DomainEvent2Dto");
+    for (svc in h.application.services) {
+        for (uc in svc.useCases) {
+            var idx = 0;
+            while (idx < uc.input.size()) {
+                var item = uc.input.at(idx);
+                if (item.isKindOf(HMM!ValueObject)) {
+                    var dto = new SMM!Dto;
+                    dto.name = item.name;
+                    idx := idx + 1;
+                    while (idx < uc.input.size() and uc.input.at(idx).isKindOf(HMM!Attribute)) {
+                        var nxt = uc.input.at(idx);
+                        var smmAttr = nxt.equivalent("HexAttr2SmmAttr");
+                        if (smmAttr.isDefined()) { dto.attributes.add(smmAttr); }
+                        idx := idx + 1;
+                    }
+                    mod.dtos.add(dto);
+                } else { idx := idx + 1; }
+            }
+            var idx2 = 0;
+            while (idx2 < uc.output.size()) {
+                var item2 = uc.output.at(idx2);
+                if (item2.isKindOf(HMM!ValueObject)) {
+                    var dto = new SMM!Dto;
+                    dto.name = item2.name;
+                    idx2 := idx2 + 1;
+                    while (idx2 < uc.output.size() and uc.output.at(idx2).isKindOf(HMM!Attribute)) {
+                        var nxt = uc.output.at(idx2);
+                        var smmAttr = nxt.equivalent("HexAttr2SmmAttr");
+                        if (smmAttr.isDefined()) { dto.attributes.add(smmAttr); }
+                        idx2 := idx2 + 1;
+                    }
+                    mod.dtos.add(dto);
+                } else { idx2 := idx2 + 1; }
+            }
+        }
+        mod.services.add(svc.equivalent("ApplicationService2Service"));
+        var controllers = svc.linkedInboundAdapters();
+        mod.controllers.addAll(controllers.equivalent());
+    }
 }
 
 @lazy
@@ -48,7 +70,7 @@ rule AggregateRoot2Entity
     transform agg : HMM!AggregateRoot
     to ent : SMM!Entity {
 
-    ent.name = agg.name;
+    ent.name = agg.name + "Entity";
 
     var idAttr  = new SMM!Attribute;
     var idType  = new SMM!PrimitiveType;
@@ -65,10 +87,22 @@ rule AggregateRoot2Entity
 
     var scalarMembers = agg.members.select(m | m.isKindOf(HMM!Attribute));
     for (attr in scalarMembers) {
-        var smmAttr = attr.equivalent("HexAttr2SmmAttr");
-        if (smmAttr.isDefined()) {
-            ent.attributes.add(smmAttr);
+        if (attr.name != agg.name.firstToLowerCase() + "Id") {
+            var smmAttr = attr.equivalent("HexAttr2SmmAttr");
+            if (smmAttr.isDefined()) {
+                ent.attributes.add(smmAttr);
+            }
         }
+    }
+
+    for (rel in agg.rels) {
+        var fkAttr  = new SMM!Attribute;
+        var fkType  = new SMM!PrimitiveType;
+        fkType.kind = SMM!PrimitiveKind#UUID;
+        fkAttr.name = rel.target.name.firstToLowerCase() + "Id";
+        fkAttr.type = fkType;
+        fkAttr.isId = false;
+        ent.attributes.add(fkAttr);
     }
 }
 
@@ -84,10 +118,12 @@ rule AggregateRoot2Repository
     idType.kind = SMM!PrimitiveKind#UUID;
     repo.idType = idType;
 
-    repo.methods.add(buildMethod("findById",   primitiveType(SMM!PrimitiveKind#UUID),    Sequence{ buildParam("id", SMM!PrimitiveKind#UUID,    SMM!ParamKind#PATH) }));
-    repo.methods.add(buildMethod("findAll",    collectionReturnType(agg.name),           Sequence{}));
-    repo.methods.add(buildMethod("save",       customReturnType(agg.name),               Sequence{ buildParam("entity", agg.name,              SMM!ParamKind#BODY) }));
-    repo.methods.add(buildMethod("deleteById", primitiveType(SMM!PrimitiveKind#BOOLEAN), Sequence{ buildParam("id", SMM!PrimitiveKind#UUID,    SMM!ParamKind#PATH) }));
+    var entity = agg.equivalent("AggregateRoot2Entity");
+
+    repo.methods.add(buildMethod("findById",   toCustomType(entity),                     Sequence{ buildParam("id", primitiveType(SMM!PrimitiveKind#UUID), SMM!ParamKind#PATH) }));
+    repo.methods.add(buildMethod("findAll",    toCollectionType(entity),                 Sequence{}));
+    repo.methods.add(buildMethod("save",       toCustomType(entity),                     Sequence{ buildParam("entity", toCustomType(entity), SMM!ParamKind#BODY) }));
+    repo.methods.add(buildMethod("deleteById", primitiveType(SMM!PrimitiveKind#BOOLEAN), Sequence{ buildParam("id", primitiveType(SMM!PrimitiveKind#UUID), SMM!ParamKind#PATH) }));
 }
 
 @lazy
@@ -125,21 +161,6 @@ rule HadVO2SmmVO
 }
 
 @lazy
-rule DomainService2Service
-    transform ds : HMM!DomainService
-    to svc : SMM!Service {
-
-    svc.name = ds.name;
-
-    for (op in ds.operations) {
-        var m      = new SMM!Method;
-        m.name     = op.name;
-        m.returnType = resolveTypeFromString(op.returnType);
-        svc.methods.add(m);
-    }
-}
-
-@lazy
 rule ApplicationService2Service
     transform as_ : HMM!ApplicationService
     to svc : SMM!Service {
@@ -148,7 +169,7 @@ rule ApplicationService2Service
 
     var linkedAggregates = as_.linkedAggregates();
     svc.requiredRepositories =
-        linkedAggregates.collect(a | a.equivalent("AggregateRoot2Repository"));
+        linkedAggregates.collect(a | SMM!Repository.allInstances().selectOne(r | r.name = a.name + "Repository"));
 
     for (uc in as_.useCases) {
         var m  = new SMM!Method;
@@ -156,7 +177,14 @@ rule ApplicationService2Service
 
         if (uc.output.size() > 0) {
             var firstOut = uc.output.first();
-            if (firstOut.isKindOf(HMM!Attribute)) {
+            if (firstOut.isKindOf(HMM!ValueObject)) {
+                var dto = findDtoByName(firstOut.name);
+                if (dto.isDefined()) {
+                    m.returnType = toCustomType(dto);
+                } else {
+                    m.returnType = resolveTypeFromString("Object");
+                }
+            } else if (firstOut.isKindOf(HMM!Attribute)) {
                 m.returnType = resolveTypeFromString(firstOut.type);
             } else {
                 m.returnType = resolveTypeFromString("Object");
@@ -166,7 +194,16 @@ rule ApplicationService2Service
         }
 
         for (inp in uc.input) {
-            if (inp.isKindOf(HMM!Attribute)) {
+            if (inp.isKindOf(HMM!ValueObject)) {
+                var dto = findDtoByName(inp.name);
+                if (dto.isDefined()) {
+                    var p = new SMM!Parameter;
+                    p.name = inp.name.firstToLowerCase();
+                    p.type = toCustomType(dto);
+                    p.kind = SMM!ParamKind#BODY;
+                    m.parameters.add(p);
+                }
+            } else if (inp.isKindOf(HMM!Attribute)) {
                 var p = new SMM!Parameter;
                 p.name = inp.name;
                 p.type = resolveTypeFromString(inp.type);
@@ -183,32 +220,18 @@ rule InboundAdapter2Controller
     transform ia : HMM!InboundAdapter
     to ctrl : SMM!Controller {
 
-    ctrl.name     = ia.name;
-    ctrl.basePath = "/" + ia.name.stripSuffix("RestController")
-                              .stripSuffix("Controller")
-                              .toLowerCase() + "s";
+    var linkedPort = ia.adapterLinkedPort();
+    var ownerSvc   = ia.ownerService();
 
-    var ownerSvc = ia.ownerService();
     if (ownerSvc.isDefined()) {
+        ctrl.name     = ia.name;
+        ctrl.basePath = buildControllerBasePath(ia.name, linkedPort);
+
         ctrl.service = ownerSvc.equivalent("ApplicationService2Service");
 
-        for (uc in ownerSvc.useCases) {
+        var included = ownerSvc.useCases.select(uc | useCaseMatchesPort(uc, linkedPort));
+        for (uc in included) {
             ctrl.endpoints.add(buildEndpoint(uc));
-        }
-    }
-}
-
-@lazy
-rule DomainEvent2Dto
-    transform evt : HMM!DomainEvent
-    to dto : SMM!Dto {
-
-    dto.name = evt.name + "Dto";
-
-    for (attr in evt.payload) {
-        var smmAttr = attr.equivalent("HexAttr2SmmAttr");
-        if (smmAttr.isDefined()) {
-            dto.attributes.add(smmAttr);
         }
     }
 }
@@ -221,7 +244,7 @@ rule HexAttr2SmmAttr
     sa.name       = ha.name;
     sa.type       = resolveTypeFromString(ha.type);
     sa.isNullable = false;
-    sa.isId       = ha.name.endsWith("Id") and ha.type = "UUID";
+    sa.isId       = false;
 }
 
 operation String stripSuffix(suffix : String) : String {
@@ -249,12 +272,15 @@ operation resolveTypeFromString(typeName : String) : SMM!Type {
     if (t.endsWith("List") or t.endsWith("Set")) {
         var col       = new SMM!CollectionType;
         col.collection = SMM!CollectionKind#LIST;
-        var inner     = new SMM!PrimitiveType;
-        inner.kind    = SMM!PrimitiveKind#STRING;
-        col.innerType = inner;
+        var innerCt   = new SMM!CustomType;
+        col.innerType = innerCt;
         return col;
     }
     var ct = new SMM!CustomType;
+    var entity = SMM!Entity.allInstances().selectOne(e | e.name.toLowerCase() = t.toLowerCase());
+    if (entity.isDefined()) {
+        ct.reference = entity;
+    }
     return ct;
 }
 
@@ -264,17 +290,17 @@ operation primitiveType(kind : Any) : SMM!PrimitiveType {
     return p;
 }
 
-operation collectionReturnType(entityName : String) : SMM!CollectionType {
-    var col       = new SMM!CollectionType;
-    col.collection = SMM!CollectionKind#LIST;
-    var inner     = new SMM!CustomType;
-    col.innerType = inner;
-    return col;
+operation toCustomType(jc : SMM!JavaClass) : SMM!CustomType {
+    var ct = new SMM!CustomType;
+    ct.reference = jc;
+    return ct;
 }
 
-operation customReturnType(entityName : String) : SMM!CustomType {
-    var ct = new SMM!CustomType;
-    return ct;
+operation toCollectionType(jc : SMM!JavaClass) : SMM!CollectionType {
+    var col       = new SMM!CollectionType;
+    col.collection = SMM!CollectionKind#LIST;
+    col.innerType = toCustomType(jc);
+    return col;
 }
 
 operation buildMethod(mName : String, retType : SMM!Type, params : Sequence) : SMM!Method {
@@ -339,7 +365,14 @@ operation buildEndpoint(uc : HMM!UseCase) : SMM!Endpoint {
 
     if (uc.output.size() > 0) {
         var firstOut = uc.output.first();
-        if (firstOut.isKindOf(HMM!Attribute)) {
+        if (firstOut.isKindOf(HMM!ValueObject)) {
+            var dto = findDtoByName(firstOut.name);
+            if (dto.isDefined()) {
+                ep.returnType = toCustomType(dto);
+            } else {
+                ep.returnType = resolveTypeFromString("Object");
+            }
+        } else if (firstOut.isKindOf(HMM!Attribute)) {
             ep.returnType = resolveTypeFromString(firstOut.type);
         } else {
             ep.returnType = resolveTypeFromString("Object");
@@ -349,7 +382,16 @@ operation buildEndpoint(uc : HMM!UseCase) : SMM!Endpoint {
     }
 
     for (inp in uc.input) {
-        if (inp.isKindOf(HMM!Attribute)) {
+        if (inp.isKindOf(HMM!ValueObject)) {
+            var dto = findDtoByName(inp.name);
+            if (dto.isDefined()) {
+                var p = new SMM!Parameter;
+                p.name = inp.name.firstToLowerCase();
+                p.type = toCustomType(dto);
+                p.kind = SMM!ParamKind#BODY;
+                ep.parameters.add(p);
+            }
+        } else if (inp.isKindOf(HMM!Attribute)) {
             var p = new SMM!Parameter;
             p.name = inp.name;
             p.type = resolveTypeFromString(inp.type);
@@ -359,6 +401,10 @@ operation buildEndpoint(uc : HMM!UseCase) : SMM!Endpoint {
     }
 
     return ep;
+}
+
+operation findDtoByName(name : String) : SMM!Dto {
+    return SMM!Dto.allInstances().selectOne(d | d.name = name);
 }
 
 operation HMM!ApplicationService linkedAggregates() : Sequence {
@@ -410,4 +456,56 @@ operation HMM!InboundAdapter ownerService() : HMM!ApplicationService {
 
     if (services.size() > 0) { return services.first(); }
     return null;
+}
+
+operation HMM!InboundAdapter adapterLinkedPort() : HMM!Port {
+    var hexagon = HMM!Hexagon.allInstances().first();
+    var ports = hexagon.links
+        .select(l | l.isKindOf(HMM!AdapterPortLink) and l.source = self)
+        .collect(l | l.target);
+    if (ports.size() > 0) { return ports.first(); }
+    return null;
+}
+
+operation buildControllerBasePath(ctrlName : String, port : HMM!Port) : String {
+    var portName = port.name.toLowerCase();
+    var cName    = ctrlName.toLowerCase();
+
+    if (portName.contains("return")) {
+        return "/api/loans/{loanId}/return";
+    }
+    if (portName.contains("renew")) {
+        return "/api/loans/{loanId}/renew";
+    }
+    if (cName.contains("bookcopy")) {
+        return "/api/books/{bookId}/copies";
+    }
+
+    var base = ctrlName.stripSuffix("RestController").stripSuffix("Controller");
+    return "/api/" + base.toLowerCase() + "s";
+}
+
+operation useCaseMatchesPort(uc : HMM!UseCase, port : HMM!Port) : Boolean {
+    if (port.isUndefined()) { return true; }
+
+    var ucName = uc.name.toLowerCase();
+    var portName = port.name.toLowerCase();
+
+    if (portName.contains("request")) {
+        return ucName.startsWith("request") or ucName.startsWith("get")
+            or ucName.startsWith("list") or ucName.startsWith("view")
+            or ucName.startsWith("search") or ucName.startsWith("find");
+    }
+    if (portName.contains("return")) {
+        return ucName.startsWith("return");
+    }
+    if (portName.contains("renew")) {
+        return ucName.startsWith("renew");
+    }
+    if (portName.contains("query")) {
+        return ucName.startsWith("search") or ucName.startsWith("check")
+            or ucName.startsWith("find") or ucName.startsWith("list");
+    }
+
+    return true;
 }

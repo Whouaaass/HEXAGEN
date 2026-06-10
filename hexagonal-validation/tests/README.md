@@ -185,19 +185,18 @@ FC = totalGenerated / expectedElements
 
 `totalGenerated` = entities + valueObjects + repositories + services + controllers + dtos
 
-### Configuration
+### How Expected Counts Are Derived
 
-Edit `fc.eol:28-35` to match the expected counts per domain:
+The expected counts are computed dynamically from the HMM source model:
 
-```eol
-var expectedElements = 25;  // total expected
-expectedDetail.put("Entities", 3);
-expectedDetail.put("ValueObjects", 2);
-expectedDetail.put("Repositories", 2);
-expectedDetail.put("Services", 2);
-expectedDetail.put("Controllers", 4);
-expectedDetail.put("DTOs", 12);
-```
+| Element | Source in HMM |
+|---|---|
+| Entities | Each `AggregateRoot` counts as 1 entity, plus every `Entity` member inside aggregates |
+| ValueObjects | Every `ValueObject` member inside aggregates |
+| Repositories | `OutboundPort` instances whose name contains `"Repository"` |
+| Services | `ApplicationService` instances |
+| Controllers | `InboundAdapter` instances |
+| DTOs | Unique `ValueObject` names used as inputs/outputs across all use cases |
 
 ### Score Mapping
 
@@ -379,34 +378,21 @@ The script auto-detects Eclipse in common install locations.
 
 ## Adapting to a Different Domain
 
+Expected counts are derived automatically from the HMM source model — no hardcoded values to update. To adapt:
+
 1. **Update model paths** in launch configs (the `modelFile` values)
-2. **Update expected counts** in `fc.eol:28-35` to match the domain specification
-3. **Update metamodel paths** if using different `.ecore` versions
+2. **Ensure the HMM model** has `AggregateRoot` elements in `domain.aggregates` (each becomes an entity)
+3. **Use `Entity`/`ValueObject`/`Attribute` members** inside aggregates to drive the count
+4. **Wire `ServiceAggregateLink`** from application services to domain aggregates so the transformation picks them up
+5. **Update metamodel paths** if using different `.ecore` versions
 
 ### Example: Medical Appointment System
 
-```eol
-// In fc.eol, change expected counts:
-var expectedElements = 42;
-expectedDetail.put("Entities", 5);
-expectedDetail.put("ValueObjects", 4);
-expectedDetail.put("Repositories", 5);
-expectedDetail.put("Services", 5);
-expectedDetail.put("Controllers", 4);
-expectedDetail.put("DTOs", 15);
-```
+Expected counts derive from the HMM model's aggregates, members, ports, and services — no manual editing of `fc.eol` required.
 
 ### Example: Sports Complex Reservation
 
-```eol
-var expectedElements = 38;
-expectedDetail.put("Entities", 5);
-expectedDetail.put("ValueObjects", 3);
-expectedDetail.put("Repositories", 3);
-expectedDetail.put("Services", 4);
-expectedDetail.put("Controllers", 3);
-expectedDetail.put("DTOs", 14);
-```
+Same approach — define aggregates, entities, value objects, and links in the HMM `.xmi` file, and the test computes all expected counts automatically.
 
 ---
 

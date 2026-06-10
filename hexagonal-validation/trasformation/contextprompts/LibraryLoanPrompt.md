@@ -56,6 +56,37 @@ The system must support:
 
 ---
 
+## Member
+
+Represents a library member who can borrow books.
+
+Attributes include:
+
+* Member identifier
+* Full name
+* Membership date
+* Email address
+* Phone number
+
+The system must be able to register new members and retrieve member information.
+
+---
+
+## Book Copy
+
+Represents an individual physical copy of a book in the library.
+
+Attributes include:
+
+* Copy identifier
+* Barcode
+* Condition status
+
+Each copy is associated with a specific book title.
+The system must support adding new copies to the catalog.
+
+---
+
 # Value Objects
 
 ## Book Metadata
@@ -65,9 +96,21 @@ Contains descriptive information about a book, such as:
 * Title
 * Author
 * ISBN
-* Publication information
 
 This information should be treated as an immutable value object.
+
+---
+
+## Publisher Info
+
+Contains publication details about a book.
+
+Contains:
+
+* Publisher name
+* Publication year
+
+This value object is part of the Book aggregate.
 
 ---
 
@@ -82,6 +125,26 @@ Contains:
 * Loan duration
 
 This object encapsulates all date-related loan calculations.
+
+---
+
+## Email
+
+Represents a member's email address as an immutable value.
+
+Contains:
+
+* Address
+
+---
+
+## Phone
+
+Represents a member's phone number as an immutable value.
+
+Contains:
+
+* Number
 
 ---
 
@@ -108,6 +171,26 @@ Responsible for:
 
 ---
 
+## Book Copy Service
+
+Responsible for:
+
+* Adding new copies of books to the catalog
+* Tracking copy status
+* Managing copy lifecycle
+
+---
+
+## Member Service
+
+Responsible for:
+
+* Registering new members
+* Retrieving member information
+* Managing member records
+
+---
+
 # Domain Services
 
 ## Availability Service
@@ -130,6 +213,18 @@ Business rules may include:
 
 * Fine calculation based on overdue days
 * Different rates depending on library policies
+
+---
+
+## Notification Service
+
+Responsible for sending notifications to library members.
+
+Responsibilities:
+
+* Sending overdue notices
+* Sending loan reminders
+* Notifying about loan events
 
 ---
 
@@ -182,6 +277,40 @@ Expected behavior:
 
 ---
 
+## Register Member
+
+A new library member is registered in the system.
+
+Expected behavior:
+
+1. Validate member information.
+2. Create a member record.
+3. Publish a member-registered event.
+
+---
+
+## Get Member
+
+A user requests information about a specific library member.
+
+Expected result:
+
+* Member details are returned.
+
+---
+
+## Add Book Copy
+
+A new physical copy of a book is added to the library catalog.
+
+Expected behavior:
+
+1. Validate the book exists.
+2. Create a copy record with a barcode.
+3. Publish a book-copy-added event.
+
+---
+
 # Domain Events
 
 The system should publish domain events when important business actions occur.
@@ -203,6 +332,18 @@ Generated when a loaned book is returned.
 Generated when a loan exceeds its due date.
 
 This event may trigger notifications or fine calculations.
+
+---
+
+## Member Registered
+
+Generated when a new member is registered in the system.
+
+---
+
+## Book Copy Added
+
+Generated when a new physical copy is added to the library catalog.
 
 ---
 
@@ -234,6 +375,8 @@ The application exposes the following capabilities through inbound ports:
 * Query Books
 * Return Book
 * Renew Loan
+* Register Member
+* Manage Book Copies
 
 These ports represent the operations available to external actors.
 
@@ -252,6 +395,18 @@ Provides persistence operations for loans.
 ### Book Repository Port
 
 Provides persistence operations for books.
+
+---
+
+### Member Repository Port
+
+Provides persistence operations for members.
+
+---
+
+### Book Copy Repository Port
+
+Provides persistence operations for book copies.
 
 ---
 
